@@ -28,7 +28,7 @@
 - **v1**: Used `pymupdf` `page.get_text()` — failed on two-column arXiv layouts (text interleaving)
 - **v2**: Migrated to `pymupdf4llm.to_markdown()` — proper two-column handling, Markdown output
 - **v3**: Tuned section detection for actual pymupdf4llm output format
-  - arXiv papers use bold numbered headers (`**1** **Introduction**`), not Markdown `#` headers
+  - arXiv papers use bold numbered headers (`1 Introduction`), not Markdown `#` headers
   - Built regex patterns for both formats: bold numbered, Markdown `#`, and standalone `**Abstract**`
   - Result: 82/132 papers successfully sectioned, 50 fell back to full_text
 
