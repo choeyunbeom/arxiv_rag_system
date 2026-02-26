@@ -100,21 +100,73 @@ Correct ranking restored. Switched to `mxbai-embed-large` and re-indexed.
 
 ---
 
-## Week 1 — Day 2 (TBD)
+### Day 2 (2025-02-26)
+
+#### RAG Pipeline (`src/api/core/`)
+
+Built the core question-answering pipeline with three modules:
+
+**Retriever** (`retriever.py`)
+- Wraps ChromaDB collection with query embedding via `mxbai-embed-large`
+- Returns ranked `RetrievedChunk` objects with text, metadata, and cosine distance
+- Configurable `top_k` parameter (default: 5)
+
+**LLM Client** (`llm_client.py`)
+- Thin wrapper around Ollama `/api/generate` endpoint
+- Calls Qwen3 4B with configurable temperature (default: 0.3 for factual answers)
+- Added `/no_think` flag to suppress Qwen3's thinking mode — without this, the model would reason inside `<think>` tags and return an empty response for long prompts
+
+**RAG Chain** (`rag_chain.py`)
+- Orchestrates the full pipeline: retrieve → format context → generate answer
+- System prompt constrains LLM to answer ONLY from retrieved context and cite paper titles
+- Context template formats each chunk with paper title, section, and content
+- Deduplicates sources by `arxiv_id` (same paper may contribute multiple chunks)
+
+#### FastAPI Application (`src/api/`)
+
+**Endpoints**:
+- `POST /query` — accepts `{question, top_k}`, returns `{answer, sources, query}`
+- `GET /health` — checks Ollama and ChromaDB connectivity, returns collection count
+- `GET /` — root info endpoint
+
+**Supporting files**:
+- `models/schemas.py` — Pydantic models for request/response validation
+- `routers/query.py` — query endpoint router
+- `routers/health.py` — health check router
+- `core/config.py` — centralised settings from environment variables
+
+**Validation**:
+- Swagger UI confirmed at `http://localhost:8000/docs`
+- Test query `"What is QLoRA and how does it work?"` returned accurate answer citing the QLoRA paper (distance 0.32)
+- Sources correctly ranked: QLoRA original paper → clinical QLoRA application → radiology QLoRA → parliamentary QLoRA
+
+#### Qwen3 Thinking Mode Fix
+
+**Problem**: Qwen3 4B has a "thinking mode" where it reasons inside `<think>...</think>` tags before answering. For long RAG prompts, the model would spend all its tokens thinking and return an empty `response` field.
+
+**Solution**: Appended `/no_think` flag to all prompts, which disables the internal reasoning and forces direct answers. This is a Qwen3-specific feature.
+
+#### End of Day Status
+- Full RAG pipeline operational: question → retrieval → LLM answer + cited sources
+- FastAPI serving on port 8000 with Swagger UI
+- All code pushed to GitHub
+
+---
+
+## Week 1 — Day 3 (TBD)
 
 **Planned**:
-- RAG pipeline: retriever → prompt template → LLM chain
-- FastAPI endpoints (`/query`, `/ingest`, `/health`)
-- First working Q&A demo
+- Streamlit UI for interactive demo
+- Additional testing and edge cases
 
 ---
 
 ## Week 2 (TBD)
 
 **Planned**:
-- Full RAG API with source citations
-- Streamlit UI
-- Baseline evaluation metrics
+- Evaluation metrics (RAGAS or custom)
+- Baseline performance benchmarks
+- Reranking experiments
 
 ---
 
