@@ -1,0 +1,340 @@
+{
+  "label": "baseline",
+  "timestamp": "2026-02-26T20:10:42.944140",
+  "config": {
+    "top_k": 5,
+    "dataset_size": 15
+  },
+  "retrieval": {
+    "hit_rate": 0.6,
+    "mrr": 0.5111111111111111,
+    "avg_precision": 0.3333333333333333,
+    "total_questions": 15,
+    "top_k": 5
+  },
+  "answer": {
+    "summary": {
+      "avg_keyword_coverage": 0.6377777777777777,
+      "source_hit_rate": 0.6,
+      "substantive_rate": 1.0,
+      "avg_word_count": 124.66666666666667,
+      "avg_latency": 14.907694768905639,
+      "total_time": 223.62,
+      "total_questions": 15
+    },
+    "details": [
+      {
+        "question": "What is QLoRA and how does it reduce memory usage?",
+        "topic": "qlora",
+        "answer": "QLORA (Quantized Low-Rank Adaptation) is a parameter-efficient fine-tuning technique that combines 4-bit quantization of frozen base model weights with Low-Rank Adaptation (LoRA) for efficient model updates. \n\nQLORA reduces memory usage through three key mechanisms:\n1. 4-bit NormalFloat (NF4) quantization of the frozen base model weights (replacing 16/32-bit floating-point weights)\n2. Double Quantization to reduce the average memory footprint by quantizing the quantization constants\n3.",
+        "answer_word_count": 64,
+        "keyword_coverage": 0.8333333333333334,
+        "keywords_found": 5,
+        "keywords_total": 6,
+        "source_hit": true,
+        "source_ids": [
+          "2512.17983v1",
+          "2505.03406v1",
+          "2305.14314v1"
+        ],
+        "expected_ids": [
+          "2305.14314v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 14.63
+      },
+      {
+        "question": "How does LoRA work for fine-tuning large language models?",
+        "topic": "lora",
+        "answer": "LoRA works by freezing the pre-trained model weights and injecting trainable rank decomposition matrices into each layer of the Transformer architecture. This approach enables parameter-efficient fine-tuning where only a small number of additional parameters are updated during training, rather than retraining all model parameters as in traditional fine-tuning. As stated in the paper \"LoRA: Low-Rank Adaptation of Large Language Models\" (Paper [4]), this method achieves over 99% reduction in trainable parameter count compared to full fine-tuning while maintaining model performance. LoRA is modular, meaning it can be added or removed from a pretrained model without altering the original weights, and has a low memory footprint requiring very little additional storage for the trainable parameters (Paper [3]).",
+        "answer_word_count": 116,
+        "keyword_coverage": 0.4,
+        "keywords_found": 2,
+        "keywords_total": 5,
+        "source_hit": true,
+        "source_ids": [
+          "2106.09685v2",
+          "2602.05988v1",
+          "2512.17983v1",
+          "2402.12354v2"
+        ],
+        "expected_ids": [
+          "2106.09685v2"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 15.45
+      },
+      {
+        "question": "What is Retrieval Augmented Generation?",
+        "topic": "rag",
+        "answer": "Retrieval-Augmented Generation (RAG) is a paradigm that enhances large language models (LLMs) on knowledge-intensive tasks by dynamically retrieving relevant external documents from large corpora and augmenting the model's input context. A typical RAG framework comprises two core components: a retriever that selects relevant documents from a large corpus, and a generator that synthesizes information from these documents to produce coherent and contextually appropriate responses [1, 2].\n\nRAG addresses limitations of LLMs such as outdated knowledge, hallucinations, and gaps in domain-specific expertise by allowing models to access dynamic external information sources during inference [4, 5]. Originally developed for natural language processing, RAG has been widely adopted in downstream tasks including open-domain question answering, fact-checking, summarization, dialogue generation, and has recently been extended to image generation applications [1, 2, 3].\n\nThe approach distinguishes between memorization and reasoning, enabling models to incorporate external knowledge during response generation while maintaining factual precision [5].",
+        "answer_word_count": 149,
+        "keyword_coverage": 1.0,
+        "keywords_found": 5,
+        "keywords_total": 5,
+        "source_hit": true,
+        "source_ids": [
+          "2502.13957v2",
+          "2506.06962v3",
+          "2402.07483v2",
+          "2512.24268v1",
+          "2601.05264v1"
+        ],
+        "expected_ids": [
+          "2601.05264v1",
+          "2502.13957v2",
+          "2401.15391v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 13.2
+      },
+      {
+        "question": "How can RAG systems be evaluated?",
+        "topic": "rag_eval",
+        "answer": "Based on the provided context, RAG systems can be evaluated through several approaches:\n\n1. **Traditional vs. Modern Evaluation Methods**: The context shows a transition from conventional NLP metrics to sophisticated LLM-based evaluation approaches. Modern methods demonstrate superior correlation with human judgment and semantic comprehension, while traditional metrics offer computational efficiency and interpretability (Paper: Engineering the RAG Stack).\n\n2. **RAGAS Evaluation System**: This provides structured metrics for evaluating context precision, faithfulness, answer relevancy, and context recall (Paper: Engineering the RAG Stack).\n\n3. **Hybrid Evaluation Frameworks**: Modern evaluation frameworks increasingly combine the semantic sophistication of LLM-based judges with traditional metrics to create scalable evaluation approaches that maintain high correlation with human assessment (Paper: Engineering the RAG Stack).\n\n4. **Benchmarking Datasets**: Standardized benchmarking enables objective comparison of RAG systems across multiple dimensions, with datasets like HotpotQA (multi-hop Wikipedia questions) being used for evaluation (Paper: Engineering the RAG Stack).\n\n5. **Continuous Evaluation Pipelines**: Emerging best practices include implementing continuous evaluation workflows with automated test case generation and human-in-the-loop validation for critical applications (Paper: Engineering the RAG Stack).\n\nThe most comprehensive evaluation approach involves multidimensional assessment that combines retrieval, generation, and trustworthiness metrics, with implementation priorities for continuous monitoring and domain-specific evaluation criteria (Paper: Engineering the RAG Stack).",
+        "answer_word_count": 203,
+        "keyword_coverage": 0.8,
+        "keywords_found": 4,
+        "keywords_total": 5,
+        "source_hit": false,
+        "source_ids": [
+          "2502.00306v2",
+          "2601.05264v1"
+        ],
+        "expected_ids": [
+          "2309.15217v2",
+          "2507.21753v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 14.34
+      },
+      {
+        "question": "What techniques exist to mitigate hallucinations in LLMs?",
+        "topic": "hallucination",
+        "answer": "Based on the provided context, several techniques exist to mitigate hallucinations in LLMs:\n\n1. Fine-tuning (a well-known technique broadly used in machine learning)\n2. Knowledge Graphs\n3. Memory Augmentation\n4. Context Prompts\n5. Preemptive Strategies\n\nThe paper \"Insights into Classifying and Mitigating LLMs' Hallucinations\" categorizes these mitigation approaches and evaluates their pros and cons (Figure 3 in the paper). \n\nAdditionally, Varshney et al. proposed a specific method that lowers GPT-3.5 hallucinations by 33% by instructing the model to rectify false information through removing or substituting false information supported by retrieved knowledge.\n\nThe paper also mentions implementing a RAG (Retrieval-Augmented Generation)-based approach for hallucination mitigation, as described in \"LLM Hallucinations in Practical Code Generation: Phenomena, Mechanism, and Mitigation.\"\n\nAll these mitigation techniques are discussed in the context of the paper \"Insights into Classifying and Mitigating LLMs' Hallucinations\" which categorizes them into different families with their respective pros and cons.",
+        "answer_word_count": 148,
+        "keyword_coverage": 0.4,
+        "keywords_found": 2,
+        "keywords_total": 5,
+        "source_hit": false,
+        "source_ids": [
+          "2311.08117v1",
+          "2409.20550v2"
+        ],
+        "expected_ids": [
+          "2510.19507v2",
+          "2502.11306v1",
+          "2508.14314v2"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 12.09
+      },
+      {
+        "question": "What is instruction tuning and why is it important?",
+        "topic": "instruction_tuning",
+        "answer": "Instruction tuning is a technique where language models (LMs) are fine-tuned to follow instructions on diverse tasks, enabling them to perform well on tasks they have not been explicitly trained on (Mishra et al., 2022; Wei et al., 2022; Ouyang et al., 2022; Chung et al., 2022). The core idea is that LMs are trained to accomplish diverse tasks by following a set of instructions, which allows for zero-shot generalization across novel tasks and domains (Chung et al., 2022).\n\nInstruction tuning is important because it enables models to perform well on unseen tasks without requiring explicit training on those specific tasks. This approach has shown promise in pushing the boundaries of zero-shot performance, allowing models to adapt to new domains and tasks through instruction-following capabilities (Touvron et al., 2023; OpenAI et al., 2024). By leveraging datasets structured as prompts from different NLP tasks, instruction tuning enhances generalization across novel tasks and domains, making it a critical technique for practical applications where models need to handle diverse, unseen scenarios without extensive retraining (Dubey et al., 2024).",
+        "answer_word_count": 175,
+        "keyword_coverage": 0.6,
+        "keywords_found": 3,
+        "keywords_total": 5,
+        "source_hit": false,
+        "source_ids": [
+          "2304.07995v1",
+          "2409.14254v1",
+          "2408.16440v2"
+        ],
+        "expected_ids": [
+          "2304.03277v1",
+          "2304.12244v3"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 15.45
+      },
+      {
+        "question": "How does LoRA+ improve upon standard LoRA?",
+        "topic": "lora_plus",
+        "answer": "The context provided does not contain information about how LoRA+ improves upon standard LoRA. \n\nThe context mentions \"LoRA+PL\" (a variant with prefix layers) in Paper [3], but states that \"LoRA+PL performs slightly worse than LoRA even with more trainable parameters.\" This indicates that this specific",
+        "answer_word_count": 45,
+        "keyword_coverage": 0.0,
+        "keywords_found": 0,
+        "keywords_total": 5,
+        "source_hit": false,
+        "source_ids": [
+          "2602.05988v1",
+          "2407.18242v3",
+          "2106.09685v2",
+          "2506.20629v1"
+        ],
+        "expected_ids": [
+          "2402.12354v2"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 16.23
+      },
+      {
+        "question": "What is the difference between full fine-tuning and parameter-efficient fine-tuning?",
+        "topic": "peft",
+        "answer": "Based on the provided context, the key differences between full fine-tuning and parameter-efficient fine-tuning (PEFT) are:\n\nFull fine-tuning trains all model parameters, which is computationally infeasible for large models as it requires modifying pretrained weights using gradient methods (Paper [2]). It involves updating all parameters with gradients to minimize the loss function (Paper [4]).\n\nParameter-efficient fine-tuning (PEFT) freezes the backbone of large-scale models and introduces only a small number of additional trainable parameters for fine-tuning (Paper [1]). Methods like LoRA (Low-Rank Adaptation) tune only a small set of newly inserted parameters while keeping pretrained weights largely unchanged (Paper [2]). PEFT approaches work by updating parameters through low-rank approximations, where LoRA optimization is equivalent to using a low-rank gradient in full fine-tuning (Paper [4]).\n\nThe fundamental difference is that full fine-tuning updates all model parameters, while PEFT methods maintain most pretrained weights and only adjust a small subset of parameters through low-rank adaptations",
+        "answer_word_count": 152,
+        "keyword_coverage": 1.0,
+        "keywords_found": 5,
+        "keywords_total": 5,
+        "source_hit": false,
+        "source_ids": [
+          "2512.15233v2",
+          "2402.12354v2",
+          "2110.06500v2",
+          "2407.18242v3"
+        ],
+        "expected_ids": [
+          "2106.09685v2",
+          "2305.14314v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 16.23
+      },
+      {
+        "question": "How do multi-hop questions challenge RAG systems?",
+        "topic": "multihop_rag",
+        "answer": "Multi-hop questions challenge RAG systems in several key ways:\n\n1. Most RAG pipelines rely on a single retrieval step, which is inadequate for complex queries requiring information synthesis from multiple sources (RAG-Gym, 2023).\n\n2. Multi-hop queries require the system to retrieve and analyze evidence from multiple sources for tasks like inferring relationships, comparing data points, and sequencing events over time (MultiHop",
+        "answer_word_count": 61,
+        "keyword_coverage": 0.6,
+        "keywords_found": 3,
+        "keywords_total": 5,
+        "source_hit": true,
+        "source_ids": [
+          "2401.15391v1",
+          "2502.13957v2"
+        ],
+        "expected_ids": [
+          "2401.15391v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 16.07
+      },
+      {
+        "question": "What is the role of vector databases in RAG pipelines?",
+        "topic": "vector_db",
+        "answer": "Based on the provided context, vector databases play a critical role in RAG pipelines by:\n\n1. Storing semantic embeddings of documents (converted from text into numerical vectors)\n2. Enabling efficient nearest neighbor search to find semantically similar data to user queries\n3. Providing the foundation for the retrieval step where relevant documents are identified before being augmented with the query and sent to the LLM\n\nAs described in \"HAKES: Scalable Vector Database for Embedding Search Service\" [1,2,3], \"RAG performs nearest neighbor search to find semantically similar data stored in a vector database. It then augments the query with the data found in the previous step and sends the new query to an LLM.\" The paper also notes that \"RAG frequently updates the vector database with data representing new knowledge, such as new documents, web pages, and past user interactions.\"\n\nVector databases are specifically designed to support efficient nearest neighbor search in high-dimensional embedding spaces, which is essential for RAG applications that require semantic relevance rather than exact keyword matching.",
+        "answer_word_count": 169,
+        "keyword_coverage": 0.6666666666666666,
+        "keywords_found": 4,
+        "keywords_total": 6,
+        "source_hit": true,
+        "source_ids": [
+          "2505.12524v1",
+          "2401.15391v1",
+          "2601.05264v1"
+        ],
+        "expected_ids": [
+          "2601.05264v1",
+          "2505.12524v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 13.29
+      },
+      {
+        "question": "How can prompt engineering improve LLM outputs?",
+        "topic": "prompt_engineering",
+        "answer": "Based on the provided context, prompt engineering improves LLM outputs through:\n\n1. Carefully selecting and composing natural language instructions to achieve desirable outputs (Paper: \"Prompt Engineering Guidelines for Using Large Language Models in Requirements Engineering\")\n\n2. Using specific prompting patterns that significantly impact output quality:\n   - Zero-shot prompting (providing only task description)\n   - Few-shot prompting (providing examples of desired output as context) (Paper: \"Prompting and Fine-Tuning Open-Sourced Large Language Models for Stance Classification\")\n\n3. Focusing on the \"context\" and \"structure\" of prompts, which the literature shows significantly impact the quality of generated outputs (Paper: \"Prompt Engineering Guidelines for Using Large Language Models in Requirements Engineering\")\n\n4. Few-shot prompting has been observed to improve LLM output quality compared to alternative methods, though effectiveness depends on specific conditions (Paper: \"Prompt Engineering Guidelines for Using Large Language Models in Requirements Engineering\")\n\nThe context indicates that prompt engineering is a discipline that tries to find the right ways to provide input to LLMs to get the best outputs, with the quality of outputs being",
+        "answer_word_count": 170,
+        "keyword_coverage": 0.6,
+        "keywords_found": 3,
+        "keywords_total": 5,
+        "source_hit": true,
+        "source_ids": [
+          "2507.03405v1",
+          "2309.13734v2",
+          "2503.02400v2"
+        ],
+        "expected_ids": [
+          "2401.14043v3",
+          "2507.03405v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 15.67
+      },
+      {
+        "question": "What is Double Quantization in QLoRA?",
+        "topic": "double_quant",
+        "answer": "Double Quantization (DQ) in QLoRA is a memory optimization technique that quantizes the quantization constants themselves to reduce memory overhead. As described in the QLoRA paper (QLORA: Efficient Finetuning of Quantized LLMs), DQ treats the quantization constants (2) from the first quantization step as inputs to a second quantization process. This second step produces two outputs: the quantized quantization constants (2) and the second level of quantization constants (1).\n\nThe technique addresses memory inefficiencies in 4-bit quantization where small block sizes (required for precision) create significant memory overhead. For example, using 32-bit constants with",
+        "answer_word_count": 94,
+        "keyword_coverage": 0.6,
+        "keywords_found": 3,
+        "keywords_total": 5,
+        "source_hit": true,
+        "source_ids": [
+          "2404.00862v1",
+          "2305.14314v1",
+          "2506.03178v1"
+        ],
+        "expected_ids": [
+          "2305.14314v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 16.22
+      },
+      {
+        "question": "How does the Ragas framework evaluate RAG pipelines?",
+        "topic": "ragas",
+        "answer": "The Ragas framework evaluates RAG pipelines using LLM-based judges to assess response quality without requiring ground truth labels (papers [2], [4]). It employs four core metrics: faithfulness, answer relevancy, context precision, and context recall (papers [2], [4]). The framework provides detailed evaluation of both retrieval and generation components through integration with LlamaIndex and Langchain (paper [1]). Ragas has been validated against human judgments on WikiEval, showing strong alignment with human predictions, particularly for faithfulness and answer relevance (paper [5]).",
+        "answer_word_count": 79,
+        "keyword_coverage": 0.8,
+        "keywords_found": 4,
+        "keywords_total": 5,
+        "source_hit": true,
+        "source_ids": [
+          "2309.15217v2",
+          "2601.05264v1"
+        ],
+        "expected_ids": [
+          "2309.15217v2"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 13.76
+      },
+      {
+        "question": "What are corpus poisoning attacks on RAG systems?",
+        "topic": "rag_security",
+        "answer": "Based on the provided context, corpus poisoning attacks on RAG systems are attacks where malicious actors inject harmful or misleading information into the RAG system during ingestion or even prior to data ingestion. \n\nAccording to Paper [4], these attacks can be divided into black-box and white-box attacks based on the access the attacker has to the retriever model. The goal of such attacks is to either:\n1. Create a retrievable adversarial passage that can cause harmful generation when added to the context of an LLM, or\n2. Craft poisons whose addition into the adversarial passage can make them retrievable for a given query.\n\nPaper [5] further demonstrates that data poisoning (corpus poisoning) is one of the most critical vulnerabilities in RAG systems, with the BadRAG framework showing that injecting only 10 malicious passages can result in high attack success rates while remaining difficult to detect.\n\nThe context indicates that these attacks",
+        "answer_word_count": 151,
+        "keyword_coverage": 0.6666666666666666,
+        "keywords_found": 4,
+        "keywords_total": 6,
+        "source_hit": true,
+        "source_ids": [
+          "2512.24268v1",
+          "2601.05264v1"
+        ],
+        "expected_ids": [
+          "2512.24268v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 16.13
+      },
+      {
+        "question": "How can small language models be made more efficient through fine-tuning?",
+        "topic": "small_llm",
+        "answer": "Based on the provided context, small language models can be made more efficient through fine-tuning by implementing contrastive fine-tuning to improve text embeddings. \n\nPaper [2] specifically demonstrates that this approach enhances the quality of text embeddings for smaller language models (MiniCPM, Phi-2, and Gemma) across various benchmarks. The study shows that contrastive fine-tuning on the NLI dataset results in significant performance improvements, with MiniCPM achieving an average 56.33% performance gain.\n\nThis method addresses the challenge that smaller language models often underperform without specialized optimization, providing a practical way to improve efficiency while maintaining sustainability.",
+        "answer_word_count": 94,
+        "keyword_coverage": 0.6,
+        "keywords_found": 3,
+        "keywords_total": 5,
+        "source_hit": false,
+        "source_ids": [
+          "2110.06500v2",
+          "2408.00690v2",
+          "2403.00946v3",
+          "2602.08239v1",
+          "2412.09827v1"
+        ],
+        "expected_ids": [
+          "2504.16584v1",
+          "2305.14314v1"
+        ],
+        "is_substantive": true,
+        "latency_seconds": 14.83
+      }
+    ]
+  }
+}

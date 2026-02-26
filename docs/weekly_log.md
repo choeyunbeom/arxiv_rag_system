@@ -114,7 +114,6 @@ Built the core question-answering pipeline with three modules:
 **LLM Client** (`llm_client.py`)
 - Thin wrapper around Ollama `/api/generate` endpoint
 - Calls Qwen3 4B with configurable temperature (default: 0.3 for factual answers)
-- Added `/no_think` flag to suppress Qwen3's thinking mode — without this, the model would reason inside `<think>` tags and return an empty response for long prompts
 
 **RAG Chain** (`rag_chain.py`)
 - Orchestrates the full pipeline: retrieve → format context → generate answer
@@ -140,48 +139,83 @@ Built the core question-answering pipeline with three modules:
 - Test query `"What is QLoRA and how does it work?"` returned accurate answer citing the QLoRA paper (distance 0.32)
 - Sources correctly ranked: QLoRA original paper → clinical QLoRA application → radiology QLoRA → parliamentary QLoRA
 
+#### Streamlit UI (`ui/app.py`)
+
+Built interactive frontend for the RAG system:
+- Question input with 5 clickable example questions
+- Answer display with formatted source cards
+- Each source includes paper title (linked to arXiv), authors, section, and relevance percentage
+- Sidebar with configurable `top_k`, live system status (Ollama + ChromaDB), and indexed chunk count
+- Response time display
+
 #### Qwen3 Thinking Mode Fix
 
-**Problem**: Qwen3 4B has a "thinking mode" where it reasons inside `<think>...</think>` tags before answering. For long RAG prompts, the model would spend all its tokens thinking and return an empty `response` field.
+**Problem**: Qwen3 4B has a "thinking mode" where it reasons inside `<think>...</think>` tags before answering. For long RAG prompts, the model would spend all its tokens thinking and return an empty `response` field. Initial fix of appending `/no_think` to prompt end only partially worked — 4/15 evaluation questions still returned empty answers.
 
-**Solution**: Appended `/no_think` flag to all prompts, which disables the internal reasoning and forces direct answers. This is a Qwen3-specific feature.
+**Solution**: Moved `/no_think` to the **beginning** of the prompt and added `_clean_response()` fallback to strip any remaining `<think>` tags from output. This resolved all empty responses.
+
+| Metric | Before fix | After fix |
+|--------|-----------|-----------|
+| Substantive Rate | 73% | **100%** |
+
+#### Evaluation Pipeline (`src/evaluation/`)
+
+Built automated evaluation system to benchmark RAG performance:
+
+**Dataset** (`eval_dataset.py`)
+- 15 curated Q&A pairs covering RAG, QLoRA, LoRA, hallucination, instruction tuning, prompt engineering, and more
+- Each question has expected source paper IDs and expected answer keywords
+- Designed for reproducible baseline vs post-fine-tuning comparison
+
+**Metrics** (`evaluate.py`)
+- **Retrieval**: Hit Rate, Mean Reciprocal Rank (MRR), Average Precision
+- **Answer**: Keyword Coverage, Source Hit Rate, Substantive Rate, Latency
+
+**Baseline Results (Qwen3 4B, no fine-tuning)**:
+
+| Metric | Value |
+|--------|-------|
+| Hit Rate | 60% |
+| MRR | 0.51 |
+| Avg Precision | 33% |
+| Keyword Coverage | 64% |
+| Source Hit Rate | 60% |
+| Substantive Rate | 100% |
+| Avg Word Count | 125 |
+| Avg Latency | 14.9s |
+
+These numbers serve as the baseline for comparison after QLoRA fine-tuning.
 
 #### End of Day Status
 - Full RAG pipeline operational: question → retrieval → LLM answer + cited sources
-- FastAPI serving on port 8000 with Swagger UI
+- FastAPI backend + Streamlit frontend both serving
+- Evaluation pipeline with 15-question dataset, baseline metrics recorded
+- Qwen3 thinking mode issue fully resolved
 - All code pushed to GitHub
-
----
-
-## Week 1 — Day 3 (TBD)
-
-**Planned**:
-- Streamlit UI for interactive demo
-- Additional testing and edge cases
 
 ---
 
 ## Week 2 (TBD)
 
 **Planned**:
-- Evaluation metrics (RAGAS or custom)
-- Baseline performance benchmarks
-- Reranking experiments
+- QLoRA fine-tuning on synthetic Q&A dataset generated from corpus
+- Post-fine-tuning evaluation comparison
+- Reranking experiments (stretch)
 
 ---
 
 ## Week 3 (TBD)
 
 **Planned**:
-- QLoRA fine-tuning on synthetic Q&A dataset
-- Compare base vs fine-tuned model performance
+- Unit + integration tests
+- CI/CD setup
+- Architecture documentation
 
 ---
 
 ## Week 4 (TBD)
 
 **Planned**:
-- Evaluation pipeline with quantitative metrics
-- Unit + integration tests
-- CI/CD setup
-- Final README and documentation
+- Final README with results and architecture diagram
+- Demo video / screenshots
+- Blog post draft
