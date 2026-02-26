@@ -105,11 +105,3 @@ The likely cause is that `nomic-embed-text` running via Ollama in GGUF/quantised
 2. **Unit testing applies to ML pipelines.** A simple 3-line cosine similarity test caught a critical failure that would have made the entire RAG system useless.
 3. **Quantisation can break task-specific behaviour.** Models optimised for specific tasks (like retrieval with prefixes) may lose that capability when quantised to GGUF format.
 4. **Trade-offs are real.** `mxbai-embed-large` has a shorter context window (512 tokens vs 8192), requiring smaller chunks. But correct retrieval with smaller chunks far outperforms broken retrieval with larger ones.
-
-## Interview-Ready Summary
-
-> "During development, I initially deployed `nomic-embed-text` as the embedding model. However, a cosine similarity sanity check revealed a critical failure: irrelevant documents (similarity 0.60) scored higher than relevant ones (0.41), producing a completely inverted vector space.
->
-> Rather than trusting the model blindly, I benchmarked `mxbai-embed-large` as an alternative. It produced correct separation (relevant: 0.76, irrelevant: 0.49), and after re-indexing with adjusted chunk sizes, all top-5 retrieval results were accurately matched to the query domain.
->
-> This experience reinforced that unit testing is essential for ML pipelines — a simple 3-line similarity test caught a failure that would have rendered the entire system useless."
