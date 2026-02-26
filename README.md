@@ -4,7 +4,7 @@ A Retrieval-Augmented Generation system for academic papers, built with a small 
 
 ## Tech Stack
 - **LLM**: Qwen3 4B (via Ollama, Metal GPU accelerated)
-- **Embedding**: nomic-embed-text
+- **Embedding**: mxbai-embed-large
 - **Vector DB**: ChromaDB
 - **API**: FastAPI
 - **UI**: Streamlit
