@@ -60,11 +60,12 @@ class RAGChain:
         return "\n".join(context_parts)
 
     def _deduplicate_sources(self, chunks: list[RetrievedChunk]) -> list[Source]:
-        """Deduplicate sources by arxiv_id, keep best distance."""
+        """Deduplicate sources by arxiv_id::section, consistent with retriever dedup."""
         seen = {}
         for chunk in chunks:
-            if chunk.arxiv_id not in seen or chunk.distance < seen[chunk.arxiv_id].distance:
-                seen[chunk.arxiv_id] = Source(
+            key = f"{chunk.arxiv_id}::{chunk.section}"
+            if key not in seen:
+                seen[key] = Source(
                     title=chunk.title,
                     arxiv_id=chunk.arxiv_id,
                     section=chunk.section,

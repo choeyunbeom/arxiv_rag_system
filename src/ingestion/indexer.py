@@ -1,3 +1,6 @@
+import logging
+
+logger = logging.getLogger(__name__)
 """
 ChromaDB Indexer (v4)
 - Uses mxbai-embed-large for embeddings
@@ -30,8 +33,8 @@ def embed_single(text: str) -> list[float] | None:
         )
         if response.status_code == 200:
             return response.json()["embeddings"][0]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"embed_single failed: {type(e).__name__}: {e}")
     return None
 
 
@@ -45,8 +48,8 @@ def embed_batch(texts: list[str]) -> list[list[float]] | None:
         )
         if response.status_code == 200:
             return response.json()["embeddings"]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"embed_batch failed: {type(e).__name__}: {e}")
     return None
 
 
