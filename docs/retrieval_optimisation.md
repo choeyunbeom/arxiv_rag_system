@@ -146,6 +146,85 @@ Query → [BM25 Index + ChromaDB Vector Search] (Top-40 each)
 | + BM25 Hybrid Search | 73% | 0.52 | RRF fusion with keyword search |
 | **+ Reranker + Dedup** | **100%** | **0.78** | Cross-encoder reranking, paper-level dedup |
 
+---
+
+## 4. Experiment 4: Token-Based Chunking
+
+**Problem**: Word-count-based chunking fundamentally misaligns with the embedding model's context window. A 200-word chunk can produce anywhere from 260 to 600+ tokens depending on content (LaTeX, table artifacts, special characters). This caused 116 chunks to exceed `mxbai-embed-large`'s 512-token limit.
+
+**Root Cause**: Measured token-to-word ratios using `mxbai-embed-large`'s BPE tokeniser:
+- Standard English text: 1.27 tokens/word
+- Academic text with formulas and tables: **2.27 tokens/word**
+
+**Solution**: Replaced word-based `chunk_text()` with token-based splitting using the model's actual tokeniser (`mixedbread-ai/mxbai-embed-large-v1`). Chunk size set to 450 tokens with 50-token overlap, guaranteeing every chunk fits within the 512-token context window.
+
+### Results
+
+| Metric | Word-based (200w) | Token-based (450t) |
+|--------|-------------------|--------------------|
+| Skipped chunks | 67 | **1** |
+| Total indexed | 5,110 | **2,885** |
+| Hit Rate | 100% | **100%** |
+| MRR | 0.78 | **0.82** |
+| Keyword Coverage | 69% | **75%** |
+
+### Decision
+Adopted **token-based chunking at 450 tokens**. The reduction in total chunks (5,110 → 2,885) is expected — 450 tokens ≈ 300-350 words, producing fewer but more contextually complete chunks. MRR improvement (+0.04) confirms that larger, coherent chunks lead to better ranking.
+
+**Key takeaway**: Text splitting in RAG pipelines should always use the embedding model's tokeniser, not word count. This is not a minor optimisation — it is a correctness requirement.
+
+---
+
+## 5. Experiment 5: Section-Aware Deduplication
+
+**Problem**: The original deduplication logic kept only 1 chunk per `arxiv_id`, discarding content from different sections of the same paper. If a question required information from both the methodology and results sections, only one would be retained.
+
+**Solution**: Changed deduplication key from `arxiv_id` to `arxiv_id::section`. Same paper, different sections are preserved; same paper, same section is deduplicated.
+
+### Results
+
+| Metric | Paper-level dedup | Section-level dedup |
+|--------|------------------|---------------------|
+| Avg Precision | 36% | **44%** |
+| Hit Rate | 100% | **100%** |
+| MRR | 0.82 | **0.82** |
+
+### Decision
+Adopted **section-aware deduplication**. Avg Precision improved by 8%p with no degradation in other metrics, confirming that multi-section context improves retrieval quality.
+
+---
+
+## 6. Final Architecture & Results
+
+### Adopted Pipeline
+```
+Query → [BM25 Index + ChromaDB Vector Search] (Top-40 each)
+      → RRF Fusion (Top-40)
+      → Cross-Encoder Reranker (ms-marco-MiniLM-L-6-v2)
+      → Section-aware Deduplication (arxiv_id::section)
+      → Top-5 Results → LLM Generation
+```
+
+### Final Hyperparameters
+- Chunk Size: 450 tokens (BPE tokeniser-based)
+- Chunk Overlap: 50 tokens
+- Embedding Model: `mxbai-embed-large`
+- Reranker: `cross-encoder/ms-marco-MiniLM-L-6-v2`
+- RRF k: 60
+- Fetch k: top_k × 8 (40 candidates for top-5)
+
+### Complete Optimisation Journey
+
+| Stage | Hit Rate | MRR | Keyword Cov. | Skipped | Key Change |
+|-------|----------|-----|-------------|---------|------------|
+| Baseline | 60% | 0.51 | 64% | ~5 | 128w chunks, dense only |
+| + Chunk optimisation | 67% | 0.42 | 66% | 116 | 200w chunks, fault-tolerant indexer |
+| + BM25 Hybrid Search | 73% | 0.52 | 67% | 116 | RRF fusion with keyword search |
+| + Reranker + Dedup | 100% | 0.78 | 69% | 116 | Cross-encoder reranking |
+| + Table cleaning | 100% | 0.78 | 69% | 67 | Markdown table artifact removal |
+| + Token-based chunking | 100% | 0.82 | 75% | 1 | BPE tokeniser-based splitting |
+| **+ Section-aware dedup** | **100%** | **0.82** | **75%** | **1** | Dedup by arxiv_id::section |
+
 ### Next Step
 Retrieval performance exceeds the 80% target. Proceeding to QLoRA fine-tuning pipeline to improve answer generation quality, using these retrieval metrics as the fixed baseline.
 
