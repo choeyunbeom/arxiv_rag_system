@@ -144,16 +144,18 @@ class HybridRetriever:
         return scored
 
     def _deduplicate(self, scored_ids: list[tuple[str, float]], top_k: int) -> list[tuple[str, float]]:
-        """Keep only the best chunk per arxiv_id."""
-        seen_papers = set()
+        """Deduplicate by arxiv_id + section. Same paper, different sections are kept."""
+        seen = set()
         deduped = []
         for cid, score in scored_ids:
             if cid not in self.chunk_id_to_idx:
                 continue
             idx = self.chunk_id_to_idx[cid]
             arxiv_id = self.chunks_data[idx]["arxiv_id"]
-            if arxiv_id not in seen_papers:
-                seen_papers.add(arxiv_id)
+            section = self.chunks_data[idx]["section"]
+            key = f"{arxiv_id}::{section}"
+            if key not in seen:
+                seen.add(key)
                 deduped.append((cid, score))
             if len(deduped) >= top_k:
                 break

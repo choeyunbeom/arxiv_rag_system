@@ -308,3 +308,30 @@ Query → [BM25 Index + ChromaDB Vector Search] (Top-40 each)
 #### Text Cleaning Improvement
 
 Added markdown table artifact removal to `clean_chunk_text()` — strips table cell patterns (`|Col1|Col2|`), separator lines, and fragmented table markup. This reduced embedding-failed chunks from 116 to 67 (42% reduction), confirming that text quality issues were the primary cause of indexing failures, not model context limits.
+
+#### Token-Based Chunking (Critical Fix)
+
+**Problem**: Word-count-based chunking (200 words) caused 116 chunks to exceed `mxbai-embed-large`'s 512-token limit. Academic text with special characters, LaTeX, and table artifacts can produce 2-3x more tokens than word count suggests.
+
+**Solution**: Replaced word-based `chunk_text()` with token-based splitting using `mxbai-embed-large`'s actual BPE tokeniser (`mixedbread-ai/mxbai-embed-large-v1`). Chunk size set to 450 tokens with 50-token overlap, guaranteeing every chunk fits within the model's context window.
+
+| Metric | Before (word-based) | After (token-based) |
+|--------|--------------------|--------------------|
+| Skipped chunks | 67 | **1** |
+| Total indexed | 5,110 | **2,885** |
+| Hit Rate | 100% | **100%** |
+| MRR | 0.78 | **0.82** |
+| Keyword Coverage | 69% | **75%** |
+
+The reduction in total chunks (5,110 → 2,885) is expected — 450 tokens ≈ 300-350 words, producing fewer but more complete chunks with better context preservation.
+
+#### Section-Aware Deduplication Fix
+
+**Problem**: Original deduplication removed all but one chunk per `arxiv_id`, discarding relevant content from different sections (e.g., methodology vs results) of the same paper.
+
+**Solution**: Changed deduplication key from `arxiv_id` to `arxiv_id::section`, allowing multiple chunks from the same paper if they come from different sections.
+
+| Metric | Paper-level dedup | Section-level dedup |
+|--------|------------------|-------------------|
+| Avg Precision | 36% | **44%** |
+| MRR | 0.82 | **0.82** |

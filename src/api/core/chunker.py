@@ -10,6 +10,9 @@ Text Chunker (v5)
 
 import json
 import re
+from transformers import AutoTokenizer
+
+_tokenizer = AutoTokenizer.from_pretrained("mixedbread-ai/mxbai-embed-large-v1")
 import hashlib
 from pathlib import Path
 from dataclasses import dataclass, asdict
@@ -20,7 +23,7 @@ PROCESSED_DIR = Path("data/processed")
 PARSED_FILE = PROCESSED_DIR / "papers_parsed.json"
 CHUNKS_FILE = PROCESSED_DIR / "chunks.json"
 
-CHUNK_SIZE = 200
+CHUNK_SIZE = 450  # tokens, not words (model limit: 512)
 CHUNK_OVERLAP = 64
 
 EXCLUDED_SECTIONS = {
@@ -161,16 +164,20 @@ def is_quality_chunk(text: str, min_words: int = 30) -> bool:
 
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    words = text.split()
-    if len(words) <= chunk_size:
+    """Split text into chunks based on token count (not word count) to respect model context limits."""
+    tokens = _tokenizer.encode(text, add_special_tokens=False)
+
+    if len(tokens) <= chunk_size:
         return [text]
 
     chunks = []
     start = 0
-    while start < len(words):
-        end = start + chunk_size
-        chunk = " ".join(words[start:end])
-        chunks.append(chunk)
+    while start < len(tokens):
+        end = min(start + chunk_size, len(tokens))
+        chunk_tokens = tokens[start:end]
+        decoded = _tokenizer.decode(chunk_tokens, skip_special_tokens=True)
+        if len(decoded.split()) >= 10:
+            chunks.append(decoded.strip())
         start += chunk_size - overlap
 
     return chunks
