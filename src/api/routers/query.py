@@ -3,29 +3,19 @@ Query Router
 - POST /query — answer a question using the RAG pipeline
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Request
 import httpx
 
 from src.api.models.schemas import QueryRequest, QueryResponse, SourceInfo
-from src.api.core.rag_chain import RAGChain
 
 router = APIRouter()
 
-# Lazy-initialised singleton to avoid loading models at import time
-_rag_chain: RAGChain | None = None
-
-
-def get_rag_chain() -> RAGChain:
-    """Return the RAGChain singleton, creating it on first call."""
-    global _rag_chain
-    if _rag_chain is None:
-        _rag_chain = RAGChain()
-    return _rag_chain
-
 
 @router.post("/query", response_model=QueryResponse)
-def query(request: QueryRequest, rag_chain: RAGChain = Depends(get_rag_chain)):
+def query(request: QueryRequest, req: Request):
     """Answer a question using RAG over arXiv papers."""
+    rag_chain = req.app.state.rag_chain
+
     try:
         result = rag_chain.query(
             question=request.question,
