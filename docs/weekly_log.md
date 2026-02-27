@@ -304,3 +304,7 @@ Query → [BM25 Index + ChromaDB Vector Search] (Top-40 each)
 - Final README with results and architecture diagram
 - Demo video / screenshots
 - Blog post draft
+
+#### Text Cleaning Improvement
+
+Added markdown table artifact removal to `clean_chunk_text()` — strips table cell patterns (`|Col1|Col2|`), separator lines, and fragmented table markup. This reduced embedding-failed chunks from 116 to 67 (42% reduction), confirming that text quality issues were the primary cause of indexing failures, not model context limits.
