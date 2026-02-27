@@ -8,20 +8,30 @@ Text Chunker (v5)
 - Quality filtering for meaningful chunks
 """
 
+import hashlib
 import json
 import re
-from transformers import AutoTokenizer
-
-_tokenizer = AutoTokenizer.from_pretrained("mixedbread-ai/mxbai-embed-large-v1")
-import hashlib
-from pathlib import Path
 from dataclasses import dataclass, asdict
 from datetime import datetime
 
+from src.api.core.config import DATA_DIR
 
-PROCESSED_DIR = Path("data/processed")
+
+PROCESSED_DIR = DATA_DIR / "processed"
 PARSED_FILE = PROCESSED_DIR / "papers_parsed.json"
 CHUNKS_FILE = PROCESSED_DIR / "chunks.json"
+
+# Lazy-loaded tokenizer to avoid side effects at import time
+_tokenizer = None
+
+
+def _get_tokenizer():
+    """Return the tokenizer, loading it on first use."""
+    global _tokenizer
+    if _tokenizer is None:
+        from transformers import AutoTokenizer
+        _tokenizer = AutoTokenizer.from_pretrained("mixedbread-ai/mxbai-embed-large-v1")
+    return _tokenizer
 
 CHUNK_SIZE = 450  # tokens, not words (model limit: 512)
 CHUNK_OVERLAP = 64
@@ -164,7 +174,8 @@ def is_quality_chunk(text: str, min_words: int = 30) -> bool:
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
     """Split text into chunks based on token count (not word count) to respect model context limits."""
-    tokens = _tokenizer.encode(text, add_special_tokens=False)
+    tokenizer = _get_tokenizer()
+    tokens = tokenizer.encode(text, add_special_tokens=False)
 
     if len(tokens) <= chunk_size:
         return [text]
@@ -174,7 +185,7 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
     while start < len(tokens):
         end = min(start + chunk_size, len(tokens))
         chunk_tokens = tokens[start:end]
-        decoded = _tokenizer.decode(chunk_tokens, skip_special_tokens=True)
+        decoded = tokenizer.decode(chunk_tokens, skip_special_tokens=True)
         if len(decoded.split()) >= 10:
             chunks.append(decoded.strip())
         start += chunk_size - overlap

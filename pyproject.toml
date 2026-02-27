@@ -8,15 +8,19 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.0",
+    "pydantic-settings>=2.0",
     
     # RAG
     "chromadb>=0.5.0",
     "langchain>=0.3.0",
     "langchain-community>=0.3.0",
+    "rank-bm25>=0.2.2",
+    "sentence-transformers>=3.0.0",
     
-    # 데이터 수집/처리
+    # Data collection / processing
     "arxiv>=2.1.0",
-    "pymupdf>=1.24.0",        # PDF 파싱
+    "pymupdf>=1.24.0",
+    "pymupdf4llm>=0.0.5",
     
     # UI
     "streamlit>=1.38.0",

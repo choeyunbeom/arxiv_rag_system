@@ -8,13 +8,15 @@ PDF Parser (v3)
 
 import json
 import re
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 import pymupdf4llm
 
+from src.api.core.config import DATA_DIR
 
-PROCESSED_DIR = Path("data/processed")
+
+PROCESSED_DIR = DATA_DIR / "processed"
 METADATA_FILE = PROCESSED_DIR / "papers_metadata.json"
 PARSED_FILE = PROCESSED_DIR / "papers_parsed.json"
 

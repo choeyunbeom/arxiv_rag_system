@@ -7,10 +7,10 @@ arXiv Paper Crawler
 
 import arxiv
 import json
-import os
 import time
-from pathlib import Path
 from datetime import datetime
+
+from src.api.core.config import DATA_DIR
 
 
 # ─── Config ─────────────────────────────────────────────
@@ -28,7 +28,6 @@ QUERIES = [
 ]
 
 MAX_RESULTS_PER_QUERY = 15
-DATA_DIR = Path("data")
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
 METADATA_FILE = PROCESSED_DIR / "papers_metadata.json"

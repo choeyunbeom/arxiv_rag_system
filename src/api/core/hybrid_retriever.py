@@ -8,23 +8,17 @@ Hybrid Retriever with Reranker (v3)
 
 import json
 import math
-import os
 import re
 from dataclasses import dataclass
-from pathlib import Path
 
+from src.api.core.config import settings, DATA_DIR
 import chromadb
 import httpx
 from rank_bm25 import BM25Okapi
 from sentence_transformers import CrossEncoder
 
 
-CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8200"))
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "localhost:11434")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "mxbai-embed-large")
-COLLECTION_NAME = "arxiv_papers"
-CHUNKS_FILE = Path("data/processed/chunks.json")
+CHUNKS_FILE = DATA_DIR / "processed" / "chunks.json"
 
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
@@ -43,8 +37,11 @@ class RetrievedChunk:
 class HybridRetriever:
     def __init__(self):
         # Vector search
-        self.chroma_client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
-        self.collection = self.chroma_client.get_collection(COLLECTION_NAME)
+        self.chroma_client = chromadb.HttpClient(host=settings.CHROMA_HOST, port=settings.CHROMA_PORT)
+        self.collection = self.chroma_client.get_collection(settings.COLLECTION_NAME)
+
+        # Persistent HTTP client for connection pooling
+        self._http_client = httpx.Client(timeout=30.0)
 
         # BM25 search
         self._build_bm25_index()
@@ -73,10 +70,9 @@ class HybridRetriever:
 
     def _embed_query(self, query: str) -> list[float]:
         """Embed a query using Ollama."""
-        response = httpx.post(
-            f"http://{OLLAMA_HOST}/api/embed",
-            json={"model": EMBED_MODEL, "input": [query]},
-            timeout=30.0,
+        response = self._http_client.post(
+            f"http://{settings.OLLAMA_HOST}/api/embed",
+            json={"model": settings.EMBED_MODEL, "input": [query]},
         )
         response.raise_for_status()
         return response.json()["embeddings"][0]

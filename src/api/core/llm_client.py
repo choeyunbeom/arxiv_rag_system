@@ -4,18 +4,17 @@ LLM Client
 - Handles Qwen3 thinking mode suppression
 """
 
-import os
 import re
+from src.api.core.config import settings
 import httpx
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "localhost:11434")
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen3:4b")
 
 
 class LLMClient:
-    def __init__(self, model: str = LLM_MODEL):
+    def __init__(self, model: str = settings.LLM_MODEL):
         self.model = model
-        self.base_url = f"http://{OLLAMA_HOST}"
+        self.base_url = f"http://{settings.OLLAMA_HOST}"
+        self._http_client = httpx.Client(timeout=180.0)
 
     def _clean_response(self, text: str) -> str:
         """Remove any <think> tags from Qwen3 output, including unclosed ones."""
@@ -40,10 +39,9 @@ class LLMClient:
         if system:
             payload["system"] = "/no_think\n\n" + system
 
-        response = httpx.post(
+        response = self._http_client.post(
             f"{self.base_url}/api/generate",
             json=payload,
-            timeout=180.0,
         )
         response.raise_for_status()
         raw = response.json()["response"]

@@ -284,6 +284,23 @@ Removed regex patterns that deleted inline math (`$...$`) and LaTeX commands fro
 
 > For full experiment data, see [Retrieval Optimisation Experiment Log](retrieval_optimisation.md).
 
+#### Code Quality Refactoring
+
+Applied 9 fixes from code review:
+
+**Critical (4)**:
+- `pyproject.toml`: added missing dependencies (pydantic-settings, rank-bm25, sentence-transformers, pymupdf4llm)
+- `config.py`: replaced deprecated `class Config` with `model_config = SettingsConfigDict()`; added `PROJECT_ROOT` and `DATA_DIR`
+- `indexer.py`: replaced `os.getenv()` with centralised `settings`
+- `query.py`: changed `async def` to `def` to avoid event loop blocking; lazy `RAGChain` init via `Depends`
+
+**Improvements (5)**:
+- All hardcoded paths (`Path("data/...")`) replaced with `DATA_DIR` from config
+- `chunker.py`: lazy tokeniser loading to avoid import-time side effects
+- `llm_client.py` and `hybrid_retriever.py`: persistent `httpx.Client` for connection pooling
+- Removed unused `retriever.py` (replaced by `hybrid_retriever.py`)
+- Granular error handling in query endpoint (503/504/400/500)
+
 #### End of Day Status
 - Hit Rate: 60% → **100%** (target was 80%)
 - MRR: 0.51 → **0.82**

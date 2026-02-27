@@ -1,6 +1,6 @@
 {
   "label": "baseline",
-  "timestamp": "2026-02-27T17:23:57.062902",
+  "timestamp": "2026-02-27T21:06:22.382056",
   "config": {
     "top_k": 5,
     "dataset_size": 15
@@ -17,17 +17,17 @@
       "avg_keyword_coverage": 0.78,
       "source_hit_rate": 1.0,
       "substantive_rate": 1.0,
-      "avg_word_count": 172.06666666666666,
-      "avg_latency": 20.397695604960123,
-      "total_time": 305.97,
+      "avg_word_count": 182.46666666666667,
+      "avg_latency": 20.200843826929727,
+      "total_time": 303.01,
       "total_questions": 15
     },
     "details": [
       {
         "question": "What is QLoRA and how does it reduce memory usage?",
         "topic": "qlora",
-        "answer": "QLoRA (Quantized Low-Rank Optimization for Fine-tuning) is an efficient fine-tuning approach that reduces memory usage enough to fine-tune large language models (up to 65B parameters) on a single 48GB GPU while preserving full 16-bit fine-tuning performance. \n\nIt reduces memory usage through three key innovations:\n1. **4-bit NormalFloat (NF4)** - An information-theoretically optimal quantization data type for normally distributed weights that outperforms 4-bit integers and floats\n2. **Double Quantization** - Quantizes the quantization constants, saving approximately 0.37 bits per parameter (about 3GB for a 65B model)\n3. **Paged Optimizers** - Uses NVIDIA unified memory to avoid gradient checkpointing memory spikes during training\n\nQLoRA backpropagates gradients through a frozen, 4-bit quantized pretrained language model into Low Rank Adapters (LoRA), converting 16-bit or 32-bit floating-point weights to 4-bit integers. This approach reduces memory footprint by approximately 60% while maintaining model accuracy through the hybrid approach of frozen quantized weights and precise updates from full-precision low-rank matrices.\n\nThe primary source for this information is \"QLoRA: Efficient Finetuning of Quantized LLMs\" (papers [1] and [4]).",
-        "answer_word_count": 170,
+        "answer": "QLoRA (Quantized Low-Rank Adaptation) is an efficient fine-tuning approach for large language models that reduces memory usage while preserving full 16-bit fine-tuning performance. \n\nQLoRA reduces memory usage through three key innovations:\n1. **4-bit NormalFloat (NF4)** - An information-theoretically optimal quantization data type for normally distributed weights that outperforms 4-bit integers and 4-bit floats\n2. **Double Quantization** - Quantizes the quantization constants, saving approximately 0.37 bits per parameter (about 3 GB for a 65B model)\n3. **Paged Optimizers** - Uses NVIDIA unified memory to avoid gradient checkpointing memory spikes during training\n\nThese techniques allow QLoRA to reduce memory footprint by approximately 60% while maintaining performance. Specifically, QLoRA backpropagates gradients through a frozen 4-bit quantized pretrained language model into Low Rank Adapters (LoRA), meaning only the smaller adapter matrices are updated while the pretrained weights remain frozen. This enables fine-tuning of very large models (up to 65B parameters) on hardware with limited memory, such as a single 48GB GPU.\n\nThe primary paper describing QLoRA is \"QLoRA: Efficient Finetuning of Quantized LLMs\" (Dettmers et al., 2023), which details these innovations and their implementation.",
+        "answer_word_count": 180,
         "keyword_coverage": 0.8333333333333334,
         "keywords_found": 5,
         "keywords_total": 6,
@@ -43,13 +43,13 @@
           "2505.03406v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 22.29
+        "latency_seconds": 22.24
       },
       {
         "question": "How does LoRA work for fine-tuning large language models?",
         "topic": "lora",
-        "answer": "# How LoRA Works for Fine-tuning Large Language Models\n\nLoRA (Low-Rank Adaptation) is a parameter-efficient fine-tuning (PEFT) technique that works by freezing the pretrained model weights and inserting low-rank matrices into the model architecture, significantly reducing computational and memory requirements while maintaining performance [2]. \n\nSpecifically, LoRA allows for efficient adaptation of large language models by adjusting only a small set of parameters, which dramatically reduces computational and storage costs compared to full fine-tuning [1]. This approach achieves over 99% reduction in trainable parameter count depending on the configuration, making it particularly suitable for resource-constrained environments [5].\n\nLoRA is modular, meaning it can be added or removed from a pretrained model without altering the original weights, and has a low memory footprint requiring very little additional storage for the trainable parameters [4]. The technique assumes that the optimization process is essentially low-dimensional, which enables efficient adaptation while preserving model performance [3].\n\nBy focusing on low-rank updates to specific model components (such as attention modules or feed-forward layers), LoRA enables targeted fine-tuning that maintains high performance while minimizing the computational resources required [2].",
-        "answer_word_count": 181,
+        "answer": "LoRA (Low-Rank Adaptation) is a parameter-efficient fine-tuning technique that works by freezing the pretrained model weights and inserting low-rank matrices into the model architecture. This approach significantly reduces computational and memory requirements of fine-tuning while maintaining performance. \n\nAccording to Paper [2], LoRA \"significantly reduces the computational and memory requirements of fine-tuning by freezing the pretrained model weights and inserting low-rank matrices into the model.\" This method enables adaptation of production-scale models on limited hardware resources while achieving performance comparable to full fine-tuning.\n\nPaper [5] further explains that LoRA \"aims to reduce the computational cost of this process by freezing the pre-trained model and updating a smaller number of parameters,\" achieving \"over 99% reduction in trainable parameter count\" compared to full fine-tuning.\n\nLoRA is modular, meaning it can be added or removed from a pretrained model without altering the original weights, and has a low memory footprint, requiring very little additional storage for the trainable parameters. These properties make it particularly suitable for fine-tuning large language models with constrained resources.",
+        "answer_word_count": 169,
         "keyword_coverage": 0.4,
         "keywords_found": 2,
         "keywords_total": 5,
@@ -67,13 +67,13 @@
           "2602.05988v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 19.41
+        "latency_seconds": 19.2
       },
       {
         "question": "What is Retrieval Augmented Generation?",
         "topic": "rag",
-        "answer": "Retrieval Augmented Generation (RAG) is a paradigm that enhances large language models (LLMs) by combining their generative abilities with access to external knowledge during inference time. According to [2], a typical RAG framework comprises two core components: a retriever that selects relevant documents from a large corpus, and a generator that synthesizes information from these documents to produce coherent and contextually appropriate responses. [5] describes RAG as enhancing LLM capabilities by retrieving relevant passages from an external database during inference time to ground responses in factual context, rather than relying solely on parametric memory.",
-        "answer_word_count": 94,
+        "answer": "Retrieval Augmented Generation (RAG) is a paradigm that enhances large language models (LLMs) by combining their generative abilities with access to external knowledge. According to the context, a typical RAG framework comprises two core components: a retriever that selects relevant documents from a large corpus, and a generator that synthesizes information from these documents to produce coherent and contextually appropriate responses [2]. \n\nRAG works by retrieving relevant passages from an external database during inference time to ground responses in factual context, rather than relying solely on parametric memory [5]. This approach has emerged as a powerful paradigm for enhancing LLMs on knowledge-intensive tasks across various domains, including code generation, question answering, and domain-specific applications like pharmaceutical regulatory compliance [2, 3].\n\nThe key innovation of RAG is that it allows LLMs to efficiently utilize external knowledge without requiring retraining, making it particularly valuable for scenarios where the model needs to incorporate up-to-date information or specialized domain knowledge [3].",
+        "answer_word_count": 157,
         "keyword_coverage": 1.0,
         "keywords_found": 5,
         "keywords_total": 5,
@@ -91,13 +91,13 @@
           "2502.00306v2"
         ],
         "is_substantive": true,
-        "latency_seconds": 26.54
+        "latency_seconds": 14.16
       },
       {
         "question": "How can RAG systems be evaluated?",
         "topic": "rag_eval",
-        "answer": "Based on the provided context, RAG systems can be evaluated through several approaches:\n\n1. **Automated reference-free evaluation frameworks** - The Ragas framework (paper [1], [2]) provides automated assessment of RAG systems without requiring reference answers. It specifically evaluates three key aspects: faithfulness (is the answer grounded in retrieved context), answer relevance (does the answer address the question), and context relevance (is the retrieved context sufficiently focused).\n\n2. **Benchmarking datasets** - Multiple datasets exist for RAG evaluation including:\n   - HotpotQA (multi-hop questions on Wikipedia with 113k QA pairs)\n   - FEVER (factual claims with verification)\n   - RGB (multi-capability evaluation)\n   - Marco (search queries on Wikipedia)\n   - These datasets vary in complexity, domain, and evaluation focus (paper [5])\n\n3. **User-centric evaluation** - Competitions like MMU-RAG (paper [4]) implement user-centric evaluation that combines:\n   - Static and dynamic evaluation modes\n   - Robustness-aware aggregation of normalized metrics\n   - Human judgments based on ordinal Likert-scale ratings\n\n4. **Enterprise evaluation platforms** - Systems like Galileo and LangSmith provide infrastructure for real-time monitoring, automated evaluation pipelines, and integration with development workflows (paper [5])\n\nThe context shows that evaluation approaches vary from automated metrics to human judgment, with specific focus on whether reference answers are available and what aspects of RAG performance need assessment (faithfulness, relevance, etc.).",
-        "answer_word_count": 207,
+        "answer": "# How RAG systems can be evaluated\n\nBased on the provided context, RAG systems can be evaluated through several approaches:\n\n1. **Automated reference-free evaluation frameworks** like Ragas (paper [1], [2]) that assess:\n   - Faithfulness (is the answer grounded in retrieved context)\n   - Answer relevance (does the answer address the question)\n   - Context relevance (is the retrieved context sufficiently focused)\n\n2. **Benchmarking datasets** that evaluate specific capabilities:\n   - HotpotQA (113k multi-hop questions requiring reasoning across multiple sources)\n   - MS Web Factoid (1m+ factoid queries)\n   - Marco (search queries from Wikipedia)\n   - FEVER (fact verification)\n   - RGB (multi-capability evaluation)\n\n3. **User-centric evaluation approaches** as demonstrated in competitions like MMU-RAG (paper [4]), which combines:\n   - Robustness-aware aggregation of normalized automatic metrics\n   - Human judgments based on ordinal likert-scale ratings\n   - Both static and real-time dynamic (RAG-arena) evaluation modes\n\n4. **Enterprise evaluation platforms** that provide:\n   - Real-time monitoring capabilities\n   - Automated evaluation pipelines\n   - Integration with existing development workflows (paper [5])\n\nThe context emphasizes that traditional language modeling evaluation (perplexity) may not be predictive of downstream performance, and question answering evaluations often use datasets that don't represent real-world usage scenarios. The most promising approach appears to be reference-free evaluation frameworks that assess multiple dimensions of quality as demonstrated by Ragas.",
+        "answer_word_count": 206,
         "keyword_coverage": 1.0,
         "keywords_found": 5,
         "keywords_total": 5,
@@ -114,13 +114,13 @@
           "2601.05264v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 20.92
+        "latency_seconds": 24.28
       },
       {
         "question": "What techniques exist to mitigate hallucinations in LLMs?",
         "topic": "hallucination",
-        "answer": "# Techniques to Mitigate Hallucinations in LLMs\n\nBased on the provided context, several techniques exist to mitigate hallucinations in LLMs:\n\n1. **Retrieval-Augmented Generation (RAG) methods**: Lightweight RAG-based approaches can effectively mitigate hallucinations in code generation (Paper [1]). Rowen (Paper [4]) implements an adaptive RAG system that integrates parametric knowledge with retrieved sources, achieving 59.34% GPT-Judge score on TruthfulQA.\n\n2. **Self-monitoring prompting frameworks**: Jha et al. proposed a framework that uses formal methods to identify errors in LLM responses autonomously through iterative refinement (Paper [2]).\n\n3. **Self-familiarity**: Luo et al. developed a zero-resource, pre-detection approach that extracts conceptual entities from instructions and uses prompt engineering to acquire familiarity scores, with low scores indicating higher likelihood of erroneous information (Paper [2]).\n\n4. **Consortium consistency**: Combining responses from multiple LLMs with different training data and architectures shows substantial improvements in hallucination detection and mitigation beyond single-model approaches (Paper [3]).\n\n5. **Context-tagged prompts**: Feldman et al. created context prompts to help LLMs answer questions more accurately through validated question sets (Paper [2]).\n\n6. **Multi-agent systems**: Iterative processes that clarify task requirements, generate code, run test cases, and mitigate hallucinations (Paper [1]).\n\n7. **Adaptive retrieval strategies**: Techniques that assess question difficulty or response confidence to decide whether to retrieve documents (Paper [5]).\n\nThese techniques address different aspects of hallucination mitigation, from pre-detection to post-hallucination correction, with varying degrees of effectiveness depending on the specific use case and context.",
-        "answer_word_count": 233,
+        "answer": "# Techniques to Mitigate Hallucinations in LLMs\n\nBased on the provided context, several techniques exist to mitigate hallucinations in LLMs:\n\n1. **RAG-based methods**: Lightweight retrieval-augmented generation approaches that integrate external knowledge with LLMs' parametric knowledge. Paper [1] shows effectiveness in mitigating undefined attributes but notes limitations with background knowledge conflicts. Paper [4] describes \"Rowen\" - an adaptive retrieval-augmented generation system that achieves 59.34% GPT-Judge score on TruthfulQA, significantly improving over state-of-the-art baselines.\n\n2. **Self-monitoring prompting frameworks**: Jha et al. proposed a framework that uses formal methods to identify errors in LLM responses autonomously through iterative refinement (Paper [2]).\n\n3. **Self-familiarity**: A zero-resource, pre-detection approach that extracts and processes conceptual entities from instructions, then uses prompt engineering to acquire familiarity scores for concepts (Paper [2]).\n\n4. **Context-tagged prompts**: Feldman et al. designed methods that create context prompts to help LLMs answer questions more accurately, then validate these prompts to ensure effectiveness (Paper [2]).\n\n5. **Consistency-based approaches**: Aggregating multiple responses from a single LLM for a given prompt to offset limitations in training data (Paper [3]). \n\n6. **Consortium consistency**: Extending single-model consistency methods to combine responses from multiple LLMs with different training data and architectures, which yields substantial improvements in hallucination detection and mitigation with reduced inference costs (Paper [3]).\n\n7. **Adaptive retrieval strategies**: Techniques that assess whether to retrieve documents based on question difficulty or response confidence, maximizing utilization of both parametric knowledge and external information (Paper [5]).\n\n8. **Multi-agent systems**: For iterative processes including (i) clarifying task requirements, (ii) generating code, (iii) running test cases, and (iv) mitigating hallucinations (Paper [1]).\n\n9. **Input query refinement**: Techniques to improve the quality of the initial prompt before LLM generation (Paper [1]).",
+        "answer_word_count": 279,
         "keyword_coverage": 0.4,
         "keywords_found": 2,
         "keywords_total": 5,
@@ -139,13 +139,13 @@
           "2502.11306v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 22.07
+        "latency_seconds": 22.9
       },
       {
         "question": "What is instruction tuning and why is it important?",
         "topic": "instruction_tuning",
-        "answer": "Instruction tuning is a fine-tuning technique for large language models (LLMs) that involves training them on specific instruction-response pairs to improve their ability to follow user requests. According to Paper [1], it significantly enhances LLM performance across various tasks. Paper [3] states that instruction tuning was initially designed to enhance the generalization capabilities of LMs across different tasks via multitask training. Its importance includes enabling zero-shot instruction following (Paper [4]), improving domain-specific capabilities (Paper [5]), and facilitating better performance in low-resource languages.",
-        "answer_word_count": 82,
+        "answer": "Based on the provided context, instruction tuning is a process of fine-tuning large language models (LLMs) with specific instruction datasets to improve their ability to follow user prompts and generate appropriate responses for various tasks.\n\nInstruction tuning is important because:\n\n1. It significantly enhances LLM performance across various tasks (Paper: Demystifying Instruction Mixing for Fine-tuning Large Language Models)\n\n2. It improves generalization capabilities of LMs across different tasks through multitask training (Paper: WizardCoder: Empowering Code Large Language Models with Evol-Instruct)\n\n3. It enables models to develop zero-shot capabilities for novel tasks and scenarios (Paper: FinGPT: Instruction Tuning Benchmark for Open-Source Large Language Models in Financial Datasets)\n\n4. It can generate better responses in low-resource languages through cross-lingual instruction tuning (Paper: X-Instruction: Aligning Language Model in Low-resource Languages with Self-curated Cross-lingual Instructions)\n\nThe context shows that instruction tuning is a critical technique that helps LLMs become more effective at understanding and responding to user instructions across diverse applications and domains.",
+        "answer_word_count": 159,
         "keyword_coverage": 0.8,
         "keywords_found": 4,
         "keywords_total": 5,
@@ -164,13 +164,13 @@
           "2304.12244v3"
         ],
         "is_substantive": true,
-        "latency_seconds": 18.89
+        "latency_seconds": 15.47
       },
       {
         "question": "How does LoRA+ improve upon standard LoRA?",
         "topic": "lora_plus",
-        "answer": "Based on the provided context, LoRA+ improves upon standard LoRA by applying different learning rates to the two low-rank adapter matrices (which in standard LoRA are updated with the same learning rate). \n\nAs stated in Paper [2] (\"LoRA+: Efficient Low Rank Adaptation of Large Models\"), this approach addresses a fundamental limitation in standard LoRA: \"low rank adaptation (lora) as originally introduced in (hu et al., 2021) leads to suboptimal finetuning of models with large width (embedding dimension). this is due to the fact that adapter matrices and in lora are updated with the same learning rate.\" \n\nThe paper demonstrates that using different learning rates for the adapter matrices with a well-chosen fixed ratio corrects this suboptimality. The results show that LoRA+ improves performance by 1-2% and finetuning speed by up to 2x, while maintaining the same computational cost as standard LoRA.\n\nThis improvement is specifically designed for large models with high embedding dimensions where standard LoRA performs suboptimally due to the uniform learning rate application to both low-rank matrices.",
-        "answer_word_count": 169,
+        "answer": "Based on the provided context, LoRA+ improves upon standard LoRA by applying different learning rates to the two low-rank matrices (A and B) with a well-chosen fixed ratio. \n\nAs stated in Paper [2] (LoRA+: Efficient Low Rank Adaptation of Large Models), standard LoRA leads to suboptimal fine-tuning of models with large width (embedding dimension) because the adapter matrices A and B are updated with the same learning rate. Using scaling arguments for large width networks, the authors demonstrated that this uniform learning rate approach does not allow efficient feature learning. By setting different learning rates for the adapter matrices with an appropriate fixed ratio, LoRA+ corrects this suboptimality.\n\nThe paper reports that this improvement results in 1-2% performance gains and up to 2x speedup in fine-tuning while maintaining the same computational cost as standard LoRA.\n\nThis improvement is also confirmed in Paper [1] (LoRA-Pro), which mentions that \"lora + (hayou et al., 2024) improves upon lora by applying different learning rates to the two low-rank matrices.\"",
+        "answer_word_count": 166,
         "keyword_coverage": 0.4,
         "keywords_found": 2,
         "keywords_total": 5,
@@ -186,13 +186,13 @@
           "2402.12354v2"
         ],
         "is_substantive": true,
-        "latency_seconds": 18.1
+        "latency_seconds": 16.67
       },
       {
         "question": "What is the difference between full fine-tuning and parameter-efficient fine-tuning?",
         "topic": "peft",
-        "answer": "Based on the provided context, here's the difference between full fine-tuning and parameter-efficient fine-tuning:\n\nFull fine-tuning updates all parameters of a pretrained neural network when adapting it to a new task or domain (Paper [2]). It maximizes domain-specific learning capacity but at the expense of higher compute requirements, sensitivity to initialization, and risk of forgetting pretrained knowledge. Full fine-tuning is particularly effective when the target task differs significantly from pretraining, often yielding higher accuracy in transfer scenarios with small datasets or strong domain shifts. However, it is rarely suited for edge deployment due to memory and compute intensity.\n\nParameter-efficient fine-tuning (PEFT) introduces a limited set of additional trainable parameters while keeping most pre-trained parameters frozen (Paper [4]). Techniques like LoRA reduce the number of trainable parameters from m×n to (k + 1) where k is the rank, thereby decreasing fine-tuning cost (Paper [3]). PEFT methods such as LoRA use low-rank matrices to approximate weight updates, making them more memory and compute efficient. This efficiency allows for practical deployment in edge scenarios and large-scale personalization contexts.\n\nThe key difference is that full fine-tuning updates all model parameters while PEFT techniques maintain most pre-trained parameters frozen and only update a small number of additional parameters (typically low-rank matrices), significantly reducing computational and memory requirements while still achieving comparable performance to full fine-tuning in many cases (Paper [1] notes that full fine-tuning via DPSGD achieves same performance as parameter-efficient methods).",
-        "answer_word_count": 237,
+        "answer": "# Difference between full fine-tuning and parameter-efficient fine-tuning\n\nBased on the provided context:\n\nFull fine-tuning updates all parameters of a pretrained neural network when adapting it to a new task or domain (Paper [2]). It involves initializing a pretrained backbone, adding a task-specific head, unfreezing all layers, and training end-to-end on target data. This approach maximizes domain-specific learning capacity but requires higher compute resources, is sensitive to initialization, and carries the risk of forgetting pretrained knowledge.\n\nParameter-efficient fine-tuning (PEFT) techniques keep most pre-trained parameters frozen while introducing a limited set of additional trainable parameters (Paper [4]). Specifically, methods like LoRA reduce the number of trainable parameters from m×n to (k + ), where k is the rank parameter (Paper [3]). PEFT approaches such as layer-wise LoRA can achieve substantial efficiency gains (e.g., reducing memory usage by around 15%) while maintaining good performance (Paper [5]).\n\nThe key difference is that full fine-tuning updates all model parameters, while PEFT methods update only a small subset of parameters (typically low-rank matrices or specific layers) to achieve comparable performance with significantly reduced computational and memory requirements.",
+        "answer_word_count": 182,
         "keyword_coverage": 1.0,
         "keywords_found": 5,
         "keywords_total": 5,
@@ -211,13 +211,13 @@
           "2412.09827v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 23.03
+        "latency_seconds": 25.01
       },
       {
         "question": "How do multi-hop questions challenge RAG systems?",
         "topic": "multihop_rag",
-        "answer": "Based on the provided context, multi-hop questions challenge RAG systems in several key ways:\n\n1. Retrieval challenges: The context indicates that \"the low values of the retrieval metrics highlight the challenges in retrieving relevant pieces of evidence for multi-hop queries when using direct similarity matching between the multihop query and text chunks\" (Paper: MultiHop-RAG).\n\n2. Reasoning limitations: Existing RAG systems are \"inadequate in answering multi-hop queries, which require retrieving and reasoning over multiple pieces of supporting evidence\" (Paper: MultiHop-RAG).\n\n3. Information noise issues: When RAG systems use retrieved information directly as input, \"the retrieved information incorporates some noises and makes the llm lost in the useful information\" (Paper: RAG-Star).\n\n4. Model capability constraints: The context shows that even state-of-the-art models struggle with multi-hop queries, with smaller models achieving \"below 10% across three metrics in musique\" (Paper: RAG-Star).\n\nThese challenges stem from the need for RAG systems to handle multiple retrieval steps and reason across different evidence pieces, which current implementations struggle with due to both technical limitations in retrieval and the complexity of multi-step reasoning.\n\nThe most comprehensive answer comes from the MultiHop-RAG paper which states that \"existing RAG systems are inadequate in answering multi-hop queries, which require retrieving and reasoning over multiple pieces of supporting evidence\" (Paper: MultiHop-RAG).",
-        "answer_word_count": 209,
+        "answer": "Based on the provided context, multi-hop questions challenge RAG systems in several key ways:\n\n1. Retrieval systems struggle to find relevant evidence for multi-hop queries when using direct similarity matching between the query and text chunks, as indicated by \"low values of the retrieval metrics\" (Paper: MultiHop-RAG).\n\n2. Existing RAG systems are \"inadequate in answering multi-hop queries, which require retrieving and reasoning over multiple pieces of supporting evidence\" (Paper: MultiHop-RAG).\n\n3. When RAG systems use retrieved information directly as input, they can incorporate noise that makes the LLM \"lose in the useful information\" (Paper: RAG-Star).\n\n4. The multi-hop nature of these queries requires complex reasoning across multiple evidence pieces, which current RAG implementations cannot handle effectively, as demonstrated by experiments showing \"existing RAG methods perform unsatisfactorily in retrieving and answering multi-hop queries\" (Paper: MultiHop-RAG).\n\nThese challenges highlight the fundamental difficulty of having RAG systems handle queries that require retrieving and reasoning across multiple pieces of evidence rather than single, direct answers.",
+        "answer_word_count": 161,
         "keyword_coverage": 0.8,
         "keywords_found": 4,
         "keywords_total": 5,
@@ -232,13 +232,13 @@
           "2502.13957v2"
         ],
         "is_substantive": true,
-        "latency_seconds": 21.95
+        "latency_seconds": 20.29
       },
       {
         "question": "What is the role of vector databases in RAG pipelines?",
         "topic": "vector_db",
-        "answer": "Vector databases in RAG pipelines serve as the semantic retrieval component that stores document embeddings to enable efficient context retrieval. Based on the context:\n\nThey convert text documents into dense vector representations (using domain-specific embedding models like e5-large-v2) that capture semantic meaning more effectively than general-purpose embeddings [5]. These embedding vectors are stored in vector databases (such as Pinecone) which support fast and accurate similarity searches through metrics like cosine similarity [5].\n\nThe primary role is to provide fine-grained retrieval of relevant document chunks (typically around 512 tokens) that act as context for the LLM generation component [5]. Vector databases help filter irrelevant information while preserving context length, which is critical since modern AI models have limited context capacity [4].\n\nThey also enable periodic updates with new or revised data sources (e.g., clinical guidelines) to maintain system accuracy with evolving information [5]. This continuous updating process ensures the RAG system stays current with the most relevant knowledge.\n\nVector databases function as the bridge between user queries and textual databases, allowing LLMs to access relevant information without hallucinations by providing focused context passages [2].",
-        "answer_word_count": 183,
+        "answer": "Based on the provided context, vector databases play a critical role in RAG pipelines by:\n\n1. Storing dense vector representations of document chunks (converted using domain-specific embedding models) with associated metadata\n2. Enabling efficient similarity search to find relevant context for the LLM through metrics like cosine similarity\n3. Providing valuable context while preserving context length by filtering information irrelevant to the user's query\n4. Supporting periodic updates with new knowledge sources (documents, web pages, user interactions) to maintain accuracy\n\nAs described in Paper [5], \"every document chunk is converted into dense vector representations using medical domain-specific embedding models... the resulting embedding vectors, along with their associated metadata, are stored in a vector database (such as pinecone). This repository supports fast and accurate similarity searches through cosine similarity metrics.\"\n\nPaper [4] further explains that \"vector databases provide valuable context while preserving context length by filtering information irrelevant to the user's query,\" which is particularly important given the limited context length in modern AI models.\n\nPaper [2] establishes that RAG systems \"provide LLMs with knowledge from a reference textual database, which enables them to act as a natural language layer between a user and textual databases, reducing the risk of hallucinations\" - a function that vector databases enable through their similarity search capabilities.\n\nThe role of vector databases is therefore fundamental to the retrieval component of RAG systems, facilitating the efficient matching of user queries with relevant contextual information from knowledge sources.",
+        "answer_word_count": 241,
         "keyword_coverage": 0.8333333333333334,
         "keywords_found": 5,
         "keywords_total": 6,
@@ -256,13 +256,13 @@
           "2502.00306v2"
         ],
         "is_substantive": true,
-        "latency_seconds": 19.12
+        "latency_seconds": 24.5
       },
       {
         "question": "How can prompt engineering improve LLM outputs?",
         "topic": "prompt_engineering",
-        "answer": "Based on the provided context, prompt engineering improves LLM outputs through several specific techniques:\n\n1. **Zero-shot prompting** - Providing only the task description to get desired outputs (Paper [1])\n\n2. **Few-shot prompting** - Giving a few examples of desired output as part of the prompt, which has been observed to improve output quality compared to alternative methods (Paper [2])\n\n3. **Chain-of-thought reasoning** - Asking the LLM to explain its reasoning and work through answering step by step, which consistently produces improved outputs and helps prevent undesirable behaviors like hallucination (Paper [1])\n\n4. **Improved context and structure** - The \"context\" and \"structure\" of prompts significantly impact the quality of generated outputs (Paper [2])\n\n5. **Reducing reasoning mistakes** - Prompt engineering has been shown to reduce reasoning mistakes and improve performance in various areas (Paper [3])\n\nThese techniques work by guiding the LLM toward desired outcomes without modifying the underlying model parameters, providing a lightweight and scalable method for influencing LLM behavior while helping to prevent issues like hallucinations and improving output quality.",
-        "answer_word_count": 171,
+        "answer": "Based on the provided context, prompt engineering improves LLM outputs through several specific techniques:\n\n1. **Zero-shot and few-shot prompting**: By providing only task descriptions (zero-shot) or including examples of desired output (few-shot), LLMs can produce improved outputs without modifying model parameters [1]. Few-shot prompting has been observed to improve output quality compared to alternative methods, though its effectiveness depends on specific conditions [2].\n\n2. **Chain-of-thought reasoning**: This technique asks LLMs to explain their reasoning step by step, which consistently improves outputs and helps prevent undesirable behaviors like hallucination (producing plausible but incorrect answers) [1].\n\n3. **Enhanced context and structure**: Research shows that both \"context\" and \"structure\" of prompts significantly impact the quality of generated outputs, with well-structured prompts leading to more accurate responses [2].\n\n4. **Reduced reasoning mistakes**: Prompt engineering provides a lightweight method for influencing LLM behavior that has been shown to reduce reasoning mistakes and improve performance across various applications [3].\n\n5. **Mitigation of specific issues**: Techniques like role-playing can enhance response relevance while managing trade-offs (e.g., balancing between response quality and potential bias amplification) [4].\n\nThe papers collectively indicate that while prompt engineering is still an evolving discipline, these techniques consistently produce improved outputs by guiding LLMs toward desired outcomes without modifying model parameters.",
+        "answer_word_count": 207,
         "keyword_coverage": 1.0,
         "keywords_found": 5,
         "keywords_total": 5,
@@ -280,13 +280,13 @@
           "2401.14043v3"
         ],
         "is_substantive": true,
-        "latency_seconds": 18.75
+        "latency_seconds": 19.05
       },
       {
         "question": "What is Double Quantization in QLoRA?",
         "topic": "double_quant",
-        "answer": "Double Quantization in QLoRA is a technique that quantizes the quantization constants themselves (not just the model weights), which saves memory while maintaining performance. According to the paper \"QLoRA: Efficient Finetuning of Quantized LLMs,\" this method saves an average of about 0.37 bits per parameter (approximately 3 GB for a 65b model). \n\nThe technical implementation involves two levels of quantization constants (c1 and c2), where c1 represents the second level and c2 represents the first level of quantization constants. This is detailed in the paper \"Bailong: Bilingual Transfer Learning based on QLoRA and Zip-tie Embedding\" which shows how the doubledequant() function combines these levels to maintain the model's functionality.\n\nThis technique is one of the three key innovations in QLoRA that helps reduce memory usage without sacrificing performance, alongside 4-bit normalfloat quantization and paged optimizers.",
-        "answer_word_count": 135,
+        "answer": "Double Quantization in QLoRA is a technique that quantizes the quantization constants themselves, creating a two-stage quantization process that saves memory without sacrificing performance. According to Paper [1], it \"quantizes the quantization constants, saving an average of about 0.37 bits per parameter (approximately 3 gb for a 65b model).\" \n\nPaper [3] provides technical details showing that in QLoRA, double quantization involves two levels of quantization constants (c1 and c2), where the pre-trained weight matrix is preserved in nf4 format, and the doubledequant() function is used to convert back from quantized form. This approach enables the model to maintain training stability while significantly reducing memory requirements during fine-tuning.\n\nThe technique is one of the key innovations in QLoRA that contributes to its efficiency in memory usage while preserving model performance.",
+        "answer_word_count": 129,
         "keyword_coverage": 0.6,
         "keywords_found": 3,
         "keywords_total": 5,
@@ -303,13 +303,13 @@
           "2404.00862v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 20.27
+        "latency_seconds": 18.52
       },
       {
         "question": "How does the Ragas framework evaluate RAG pipelines?",
         "topic": "ragas",
-        "answer": "Based on the provided context, the Ragas framework evaluates RAG pipelines through a suite of reference-free metrics that assess key dimensions of RAG system quality without requiring ground truth human annotations.\n\nSpecifically, Ragas employs LLM-based judges to evaluate response quality through four core metrics:\n1. Faithfulness (whether the answer is grounded in the retrieved context)\n2. Answer relevancy (whether the answer addresses the question)\n3. Context precision (how focused the retrieved context is)\n4. Context recall (how much relevant context is retrieved)\n\nAs stated in Paper [1], Ragas provides a framework that evaluates \"the ability of the retrieval system to identify relevant and focused context passages, the ability of the LLM to exploit such passages in a faithful way, or the quality of the generation itself\" without ground truth annotations.\n\nPaper [4] confirms that Ragas implementation aligns with human predictions, particularly for faithfulness and answer relevance, and specifically evaluates three critical aspects: faithfulness, answer relevance, and context relevance.\n\nThe framework is designed to be easy to use and provides valuable insights for RAG system developers even in the absence of ground truth data.\n\nCitations: [1] Ragas: Automated Evaluation of Retrieval Augmented Generation; [4] Ragas: Automated Evaluation of Retrieval Augmented Generation.",
-        "answer_word_count": 200,
+        "answer": "Based on the provided context, Ragas evaluates RAG pipelines through a reference-free framework that uses LLM-based judges to assess response quality without requiring ground truth annotations. \n\nSpecifically, Ragas implements four core metrics to evaluate different dimensions of RAG systems:\n1. Faithfulness (whether the answer is grounded in retrieved context)\n2. Answer relevancy (whether the answer addresses the question)\n3. Context precision\n4. Context recall\n\nAs stated in Paper [1] (Ragas: Automated Evaluation of Retrieval Augmented Generation), this framework enables evaluation of RAG architectures' ability to identify relevant context passages, exploit passages faithfully, and produce high-quality generation without human annotations. \n\nPaper [4] confirms that Ragas specifically assesses three critical aspects: faithfulness, answer relevance, and context relevance. The framework's predictions align closely with human judgments, particularly for faithfulness and answer relevance, as demonstrated through evaluation on the WikiEval dataset.\n\nThe evaluation is implemented using LLM-based judges that assess response quality against predefined criteria, as noted in Paper [2] (Engineering the RAG Stack).",
+        "answer_word_count": 160,
         "keyword_coverage": 1.0,
         "keywords_found": 5,
         "keywords_total": 5,
@@ -325,13 +325,13 @@
           "2601.05264v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 17.76
+        "latency_seconds": 19.48
       },
       {
         "question": "What are corpus poisoning attacks on RAG systems?",
         "topic": "rag_security",
-        "answer": "Based on the provided context, corpus poisoning attacks on RAG systems refer to attacks where adversaries inject malicious documents into the RAG knowledge base to manipulate system behavior. \n\nSpecifically, in e-commerce contexts, a malicious seller could add poisoned documents to make their products retrievable for irrelevant queries to increase sales. In legal contexts, adversaries could try to make documents with incorrect judgments retrievable with malicious intentions. \n\nThese attacks are categorized as \"malicious poisoning document injection\" in the literature, which is identified as a high-risk attack type with high complexity and high rate (Paper [3]). Paper [1] specifically addresses these attacks by proposing RAGPart and RAGMask as retrieval-stage defenses against corpus poisoning in RAG systems.\n\nThe context shows that corpus poisoning attacks can be countered through technical defense mechanisms that protect against document injection into the RAG knowledge database.",
-        "answer_word_count": 138,
+        "answer": "# Corpus Poisoning Attacks on RAG Systems\n\nCorpus poisoning attacks on RAG systems involve adversaries injecting malicious documents into the knowledge base to compromise system functionality. According to the context:\n\n- In e-commerce contexts, malicious sellers may add poisoned documents to make their products retrievable for irrelevant queries to increase sales (Paper [1])\n- In legal contexts, attackers could create documents with incorrect judgments that become retrievable through malicious intent (Paper [1])\n- These attacks represent a form of \"document injection\" with high risk level, high complexity, and very high impact (Paper [3])\n\nThe papers indicate that corpus poisoning attacks are distinct from membership inference attacks, as they specifically target the knowledge base integrity rather than attempting to infer document membership. Adversaries can either directly inject malicious documents into the RAG knowledge database or poison the RAG system itself, which can be exploited as a preliminary step in more sophisticated data extraction attacks (Paper [2]).\n\nThe RAGPart and RAGMask frameworks specifically address these poisoning threats by implementing retrieval-stage defenses to maintain system robustness against such attacks (Paper [1]).",
+        "answer_word_count": 178,
         "keyword_coverage": 0.8333333333333334,
         "keywords_found": 5,
         "keywords_total": 6,
@@ -345,13 +345,13 @@
           "2512.24268v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 17.34
+        "latency_seconds": 15.83
       },
       {
         "question": "How can small language models be made more efficient through fine-tuning?",
         "topic": "small_llm",
-        "answer": "Based on the provided context, small language models can be made more efficient through fine-tuning using the following approaches:\n\n1. **Contrastive fine-tuning**: This technique enhances text embeddings for smaller language models (such as MiniCPM, Phi-2, and Gemma) by training them to distinguish between similar and dissimilar text pairs. This improves semantic understanding while maintaining computational efficiency (Paper [1] and [3]).\n\n2. **Parameter-efficient fine-tuning with LoRA (Low-Rank Adaptation)**: This method allows for efficient adaptation of small language models by adjusting only a small set of parameters, significantly reducing computational and storage costs. The approach was implemented using Hugging Face's PEFT library (Paper [2] and [3]).\n\n3. **Layer-wise LoRA fine-tuning**: This advanced technique identifies and fine-tunes only the most relevant layers of the model based on their contribution to changes in internal representations. This reduces trainable parameters by up to 50% while maintaining predictive performance across different models and tasks (Paper [4]).\n\nThese approaches specifically address the resource constraints of smaller language models while improving their performance on text embedding tasks and downstream applications.",
-        "answer_word_count": 172,
+        "answer": "Based on the provided context, small language models can be made more efficient through fine-tuning using these approaches:\n\n1. **Contrastive fine-tuning** (Papers [1] and [3]): This technique enhances text embeddings for smaller language models (MiniCPM, Phi-2, Gemma) by training them to distinguish between similar and dissimilar text pairs. The approach yields significant improvements, with MiniCPM showing an average 56.33% performance gain across benchmarks.\n\n2. **Low-Rank Adaptation (LoRA)** (Papers [2], [3], and [4]): This parameter-efficient fine-tuning technique adjusts only a small set of parameters while freezing most of the pre-trained model, significantly reducing computational and storage costs. It allows for efficient adaptation without requiring full parameter updates.\n\n3. **Layer-wise LoRA fine-tuning** (Paper [4]): This approach identifies and fine-tunes only the most relevant layers of the model, reducing trainable parameters by up to 50% while maintaining predictive performance across different architectures and tasks.\n\nThese methods specifically address the efficiency challenges of small language models by minimizing computational resources while enhancing their capabilities through targeted fine-tuning.",
+        "answer_word_count": 163,
         "keyword_coverage": 0.8,
         "keywords_found": 4,
         "keywords_total": 5,
@@ -368,7 +368,7 @@
           "2305.14314v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 19.52
+        "latency_seconds": 25.42
       }
     ]
   }

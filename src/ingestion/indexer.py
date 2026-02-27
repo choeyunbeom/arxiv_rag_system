@@ -6,22 +6,16 @@ ChromaDB Indexer (v4)
 """
 
 import json
-import os
 import time
-from pathlib import Path
 
 import chromadb
 import httpx
 
+from src.api.core.config import settings, DATA_DIR
 
-PROCESSED_DIR = Path("data/processed")
+
+PROCESSED_DIR = DATA_DIR / "processed"
 CHUNKS_FILE = PROCESSED_DIR / "chunks.json"
-
-CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8200"))
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "localhost:11434")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "mxbai-embed-large")
-COLLECTION_NAME = "arxiv_papers"
 
 BATCH_SIZE = 32
 
@@ -30,8 +24,8 @@ def embed_single(text: str) -> list[float] | None:
     """Embed a single text. Returns None on failure."""
     try:
         response = httpx.post(
-            f"http://{OLLAMA_HOST}/api/embed",
-            json={"model": EMBED_MODEL, "input": [text]},
+            f"http://{settings.OLLAMA_HOST}/api/embed",
+            json={"model": settings.EMBED_MODEL, "input": [text]},
             timeout=60.0,
         )
         if response.status_code == 200:
@@ -45,8 +39,8 @@ def embed_batch(texts: list[str]) -> list[list[float]] | None:
     """Embed a batch. Returns None on failure."""
     try:
         response = httpx.post(
-            f"http://{OLLAMA_HOST}/api/embed",
-            json={"model": EMBED_MODEL, "input": texts},
+            f"http://{settings.OLLAMA_HOST}/api/embed",
+            json={"model": settings.EMBED_MODEL, "input": texts},
             timeout=120.0,
         )
         if response.status_code == 200:
@@ -64,15 +58,15 @@ def index_chunks():
     chunks = [c for c in data["chunks"] if c.get("text") and len(c["text"].strip()) > 10]
     print(f"Loading {len(chunks)} chunks (filtered from {len(data['chunks'])})")
 
-    client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
+    client = chromadb.HttpClient(host=settings.CHROMA_HOST, port=settings.CHROMA_PORT)
 
     try:
-        client.delete_collection(COLLECTION_NAME)
+        client.delete_collection(settings.COLLECTION_NAME)
     except Exception:
         pass
 
     collection = client.create_collection(
-        name=COLLECTION_NAME,
+        name=settings.COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
     )
 
@@ -127,7 +121,7 @@ def index_chunks():
             print(f"  Batch {batch_idx + 1}/{total_batches} fallback ({ok} ok, {len(batch)-ok} skipped)")
 
     count = collection.count()
-    print(f"\n  Indexed {count} chunks in collection '{COLLECTION_NAME}'")
+    print(f"\n  Indexed {count} chunks in collection '{settings.COLLECTION_NAME}'")
     print(f"  Skipped {skipped} chunks (embedding failed)")
 
     # Test query
