@@ -301,6 +301,10 @@ Applied 9 fixes from code review:
 - Removed unused `retriever.py` (replaced by `hybrid_retriever.py`)
 - Granular error handling in query endpoint (503/504/400/500)
 
+#### FastAPI Lifespan Pre-loading
+
+Moved `RAGChain` initialisation from lazy `Depends()` in query router to FastAPI's `lifespan` event. Heavy resources (ChromaDB connection, BM25 index, Cross-Encoder model) are now loaded once at server startup, eliminating cold start latency on the first API request. The `query` endpoint accesses the pre-loaded instance via `req.app.state.rag_chain`.
+
 #### Bug Fixes from Code Review
 
 - `indexer.py`: replaced silent `except Exception: pass` with `logging.warning` — makes debugging possible for embedding failures
