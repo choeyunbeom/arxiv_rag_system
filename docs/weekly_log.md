@@ -301,10 +301,15 @@ Applied 9 fixes from code review:
 - Removed unused `retriever.py` (replaced by `hybrid_retriever.py`)
 - Granular error handling in query endpoint (503/504/400/500)
 
+#### Bug Fixes from Code Review
+
+- `indexer.py`: replaced silent `except Exception: pass` with `logging.warning` — makes debugging possible for embedding failures
+- `rag_chain.py`: aligned source deduplication with retriever logic (`arxiv_id::section` instead of `arxiv_id` only), resolving score/distance comparison inconsistency
+
 #### End of Day Status
 - Hit Rate: 60% → **100%** (target was 80%)
 - MRR: 0.51 → **0.82**
-- Keyword Coverage: 64% → **78%**
+- Keyword Coverage: 64% → **79%**
 - Skipped chunks: 116 → **1** (token-based chunking)
 - Retrieval pipeline fully optimised with hybrid search + reranking + token-based chunking
 - All code pushed to GitHub
