@@ -127,8 +127,7 @@ def clean_chunk_text(text: str) -> str:
     text = re.sub(r"^[-|:]+$", "", text, flags=re.MULTILINE)
     text = re.sub(r"\[[\w\s]*\]", "", text)
     text = re.sub(r"_([^_]{1,3})_", "", text)
-    text = re.sub(r"\\[a-zA-Z]+\{[^}]*\}", "", text)
-    text = re.sub(r"\$[^$]*\$", "", text)
+    # LaTeX commands preserved (important for academic content)
 
     lines = text.split("\n")
     clean_lines = []

@@ -278,12 +278,16 @@ Word-count chunking fundamentally misaligned with the embedding model's token li
 
 Original dedup removed all but one chunk per paper. Changed to `arxiv_id::section` key, preserving different sections from the same paper. Avg Precision improved 36% → 44%.
 
+#### Math & LaTeX Preservation Fix
+
+Removed regex patterns that deleted inline math (`$...$`) and LaTeX commands from chunks. Academic ML papers rely on formulas to explain methods — deleting them destroyed core content. Also replaced arbitrary reranker distance formula with proper sigmoid normalisation. Keyword Coverage improved 75% → 78%.
+
 > For full experiment data, see [Retrieval Optimisation Experiment Log](retrieval_optimisation.md).
 
 #### End of Day Status
 - Hit Rate: 60% → **100%** (target was 80%)
 - MRR: 0.51 → **0.82**
-- Keyword Coverage: 64% → **75%**
+- Keyword Coverage: 64% → **78%**
 - Skipped chunks: 116 → **1** (token-based chunking)
 - Retrieval pipeline fully optimised with hybrid search + reranking + token-based chunking
 - All code pushed to GitHub

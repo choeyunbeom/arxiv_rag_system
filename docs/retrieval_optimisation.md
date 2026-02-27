@@ -223,7 +223,8 @@ Query → [BM25 Index + ChromaDB Vector Search] (Top-40 each)
 | + Reranker + Dedup | 100% | 0.78 | 69% | 116 | Cross-encoder reranking |
 | + Table cleaning | 100% | 0.78 | 69% | 67 | Markdown table artifact removal |
 | + Token-based chunking | 100% | 0.82 | 75% | 1 | BPE tokeniser-based splitting |
-| **+ Section-aware dedup** | **100%** | **0.82** | **75%** | **1** | Dedup by arxiv_id::section |
+| + Section-aware dedup | 100% | 0.82 | 75% | 1 | Dedup by arxiv_id::section |
+| **+ Math/LaTeX preservation** | **100%** | **0.82** | **78%** | **1** | Removed regex deleting formulas, sigmoid normalisation |
 
 ### Next Step
 Retrieval performance exceeds the 80% target. Proceeding to QLoRA fine-tuning pipeline to improve answer generation quality, using these retrieval metrics as the fixed baseline.

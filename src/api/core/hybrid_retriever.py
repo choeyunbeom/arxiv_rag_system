@@ -7,6 +7,7 @@ Hybrid Retriever with Reranker (v3)
 """
 
 import json
+import math
 import os
 import re
 from dataclasses import dataclass
@@ -190,7 +191,7 @@ class HybridRetriever:
                 section=c["section"],
                 authors=", ".join(c["metadata"].get("authors", [])[:3]),
                 published=c["metadata"].get("published", ""),
-                distance=1.0 - (rerank_score / 10.0),
+                distance=1.0 - (1.0 / (1.0 + math.exp(-rerank_score))),  # sigmoid normalisation
             )
             chunks.append(chunk)
 
