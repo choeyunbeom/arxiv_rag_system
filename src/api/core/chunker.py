@@ -117,6 +117,11 @@ def clean_chunk_text(text: str) -> str:
     text = re.sub(r"\[([^\]]*)\]\(.*?\)", r"\1", text)
     text = re.sub(r"^#+\s*", "", text, flags=re.MULTILINE)
     text = re.sub(r"[�\ufffd]", "", text)
+    # Remove markdown table remnants
+    text = re.sub(r"\|[^|\n]{0,30}\|[^|\n]{0,30}\|", "", text)
+    text = re.sub(r"\|Col\d+", "", text)
+    text = re.sub(r"^\|.*\|\s*$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[-|:]+$", "", text, flags=re.MULTILINE)
     text = re.sub(r"\[[\w\s]*\]", "", text)
     text = re.sub(r"_([^_]{1,3})_", "", text)
     text = re.sub(r"\\[a-zA-Z]+\{[^}]*\}", "", text)

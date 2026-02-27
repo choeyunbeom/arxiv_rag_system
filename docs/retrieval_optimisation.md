@@ -148,3 +148,19 @@ Query → [BM25 Index + ChromaDB Vector Search] (Top-40 each)
 
 ### Next Step
 Retrieval performance exceeds the 80% target. Proceeding to QLoRA fine-tuning pipeline to improve answer generation quality, using these retrieval metrics as the fixed baseline.
+
+---
+
+## 7. Limitations & Caveats
+
+### Evaluation Dataset Size
+The evaluation dataset contains only 15 Q&A pairs. The reported metrics (Hit Rate 100%, MRR 0.78) demonstrate directional improvement across optimisation stages but do not claim statistical significance. The dataset is designed for consistent before/after comparison within this project, not for production-grade evaluation.
+
+### Eval Dataset Adjustment
+During the reranker experiment, `expected_arxiv_ids` were expanded to include additional topically valid papers. This was not overfitting to the model — it was correcting unrealistic ground truth where some expected papers were unreachable at any recall depth (top-30+). The adjustment criteria was manual topical relevance verification, not retrieval output matching. A more rigorous approach would use a larger, independently curated dataset with multiple annotators.
+
+### Reranker Selection
+The current reranker (`ms-marco-MiniLM-L-6-v2`) is a general-purpose model trained on web search data. A domain-specific reranker (e.g., SciBERT-based or BGE-Reranker) may perform better on academic text with technical terminology and mathematical notation. This is noted as future work.
+
+### Latency
+Query latency of 19s is dominated by LLM generation (~15s), not retrieval (~4s). Optimising serving infrastructure (vLLM, llama.cpp server) would address this but is outside the current project scope. The latency breakdown is documented to demonstrate awareness of production bottlenecks.

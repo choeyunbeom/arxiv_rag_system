@@ -97,7 +97,9 @@ All top-5 results are RAG-related papers with distances of 0.17–0.19.
 
 ## Root Cause Analysis
 
-The likely cause is that `nomic-embed-text` running via Ollama in GGUF/quantised format does not properly handle the task-specific prefixes it was trained with. The Hugging Face version of nomic-embed may work correctly, but the Ollama-served GGUF variant produces degraded embeddings for retrieval tasks.
+The root cause has not been definitively identified. One hypothesis is that `nomic-embed-text` running via Ollama in GGUF/quantised format may not properly handle the task-specific prefixes it was trained with. The Hugging Face version of nomic-embed may work correctly, but the Ollama-served GGUF variant produces degraded embeddings for retrieval tasks.
+
+An alternative explanation is that Ollama's tokeniser may incorrectly process the `search_query:` and `search_document:` prefixes, stripping or misinterpreting them before they reach the model. Without access to Ollama's internal tokenisation pipeline, this remains an open question.
 
 ## Key Takeaways
 
