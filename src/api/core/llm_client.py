@@ -18,8 +18,11 @@ class LLMClient:
         self.base_url = f"http://{OLLAMA_HOST}"
 
     def _clean_response(self, text: str) -> str:
-        """Remove any leftover <think> tags from Qwen3 output."""
+        """Remove any <think> tags from Qwen3 output, including unclosed ones."""
+        # Remove complete <think>...</think> blocks
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        # Remove unclosed <think> (model ran out of tokens mid-thinking)
+        text = re.sub(r"<think>.*", "", text, flags=re.DOTALL)
         return text.strip()
 
     def generate(self, prompt: str, system: str = "", temperature: float = 0.3) -> str:
@@ -30,17 +33,17 @@ class LLMClient:
             "stream": False,
             "options": {
                 "temperature": temperature,
-                "num_predict": 1024,
+                "num_predict": 2048,
             },
         }
 
         if system:
-            payload["system"] = system
+            payload["system"] = "/no_think\n\n" + system
 
         response = httpx.post(
             f"{self.base_url}/api/generate",
             json=payload,
-            timeout=120.0,
+            timeout=180.0,
         )
         response.raise_for_status()
         raw = response.json()["response"]

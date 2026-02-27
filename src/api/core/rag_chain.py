@@ -7,7 +7,7 @@ RAG Chain
 
 from dataclasses import dataclass
 
-from src.api.core.retriever import Retriever, RetrievedChunk
+from src.api.core.hybrid_retriever import HybridRetriever as Retriever, RetrievedChunk
 from src.api.core.llm_client import LLMClient
 
 

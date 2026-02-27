@@ -1,9 +1,8 @@
 """
-ChromaDB Indexer (v3)
-- Vectorise chunks using Ollama embeddings
-- Uses nomic-embed-text prefixes for proper retrieval
-  (search_document: for docs, search_query: for queries)
-- Store in ChromaDB with metadata
+ChromaDB Indexer (v4)
+- Uses mxbai-embed-large for embeddings
+- Batch indexing with individual fallback on failure
+- If a batch fails, tries each chunk individually and skips only the broken ones
 """
 
 import json
@@ -21,51 +20,52 @@ CHUNKS_FILE = PROCESSED_DIR / "chunks.json"
 CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
 CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8200"))
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "localhost:11434")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
+EMBED_MODEL = os.getenv("EMBED_MODEL", "mxbai-embed-large")
 COLLECTION_NAME = "arxiv_papers"
 
 BATCH_SIZE = 32
 
 
-def get_embeddings(texts: list[str], prefix: str = "", max_retries: int = 3) -> list[list[float]]:
-    """Generate embeddings via Ollama API with optional prefix."""
-    url = f"http://{OLLAMA_HOST}/api/embed"
+def embed_single(text: str) -> list[float] | None:
+    """Embed a single text. Returns None on failure."""
+    try:
+        response = httpx.post(
+            f"http://{OLLAMA_HOST}/api/embed",
+            json={"model": EMBED_MODEL, "input": [text]},
+            timeout=60.0,
+        )
+        if response.status_code == 200:
+            return response.json()["embeddings"][0]
+    except Exception:
+        pass
+    return None
 
-    # Add prefix for nomic-embed-text
-    if prefix:
-        texts = [f"{prefix}{t}" for t in texts]
 
-    for attempt in range(max_retries):
-        try:
-            response = httpx.post(
-                url,
-                json={"model": EMBED_MODEL, "input": texts},
-                timeout=120.0,
-            )
-            response.raise_for_status()
+def embed_batch(texts: list[str]) -> list[list[float]] | None:
+    """Embed a batch. Returns None on failure."""
+    try:
+        response = httpx.post(
+            f"http://{OLLAMA_HOST}/api/embed",
+            json={"model": EMBED_MODEL, "input": texts},
+            timeout=120.0,
+        )
+        if response.status_code == 200:
             return response.json()["embeddings"]
-        except Exception as e:
-            if attempt < max_retries - 1:
-                print(f"    Retry {attempt + 1}/{max_retries}: {e}")
-                time.sleep(2)
-            else:
-                raise
+    except Exception:
+        pass
+    return None
 
 
 def index_chunks():
     """Index all chunks into ChromaDB."""
-    # Load chunks
     with open(CHUNKS_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # Filter out empty or very short texts
     chunks = [c for c in data["chunks"] if c.get("text") and len(c["text"].strip()) > 10]
     print(f"Loading {len(chunks)} chunks (filtered from {len(data['chunks'])})")
 
-    # Connect to ChromaDB
     client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
 
-    # Recreate collection (drop if exists)
     try:
         client.delete_collection(COLLECTION_NAME)
     except Exception:
@@ -76,9 +76,9 @@ def index_chunks():
         metadata={"hnsw:space": "cosine"},
     )
 
-    # Batch indexing
     total_batches = (len(chunks) + BATCH_SIZE - 1) // BATCH_SIZE
     indexed = 0
+    skipped = 0
 
     for batch_idx in range(total_batches):
         start = batch_idx * BATCH_SIZE
@@ -99,45 +99,48 @@ def index_chunks():
             for c in batch
         ]
 
-        try:
-            # Embed with document prefix
-            embeddings = get_embeddings(texts, prefix="search_document: ")
+        # Try batch first
+        embeddings = embed_batch(texts)
 
-            # Add to ChromaDB
+        if embeddings:
             collection.add(
-                ids=ids,
-                embeddings=embeddings,
-                documents=texts,
-                metadatas=metadatas,
+                ids=ids, embeddings=embeddings,
+                documents=texts, metadatas=metadatas,
             )
-
             indexed += len(batch)
             print(f"  Batch {batch_idx + 1}/{total_batches} indexed ({indexed}/{len(chunks)})")
+        else:
+            # Fallback: embed individually
+            ok = 0
+            for i in range(len(batch)):
+                emb = embed_single(texts[i])
+                if emb:
+                    collection.add(
+                        ids=[ids[i]], embeddings=[emb],
+                        documents=[texts[i]], metadatas=[metadatas[i]],
+                    )
+                    indexed += 1
+                    ok += 1
+                else:
+                    skipped += 1
 
-        except Exception as e:
-            print(f"  Batch {batch_idx + 1}/{total_batches} FAILED: {e}")
-            continue
+            print(f"  Batch {batch_idx + 1}/{total_batches} fallback ({ok} ok, {len(batch)-ok} skipped)")
 
-    # Verify
     count = collection.count()
     print(f"\n  Indexed {count} chunks in collection '{COLLECTION_NAME}'")
+    print(f"  Skipped {skipped} chunks (embedding failed)")
 
-    # Test query (with query prefix)
+    # Test query
     print("\n  Test query: 'What is Retrieval Augmented Generation?'")
-    test_embedding = get_embeddings(
-        ["What is Retrieval Augmented Generation?"],
-        prefix="search_query: "
-    )
-    results = collection.query(
-        query_embeddings=test_embedding,
-        n_results=5,
-    )
-    for i, (doc, meta, dist) in enumerate(zip(
-        results["documents"][0], results["metadatas"][0], results["distances"][0]
-    )):
-        print(f"\n  [{i+1}] dist={dist:.4f} | {meta['title'][:50]}")
-        print(f"      Section: {meta['section']}")
-        print(f"      Preview: {doc[:100]}...")
+    test_emb = embed_single("What is Retrieval Augmented Generation?")
+    if test_emb:
+        results = collection.query(query_embeddings=[test_emb], n_results=5)
+        for i, (doc, meta, dist) in enumerate(zip(
+            results["documents"][0], results["metadatas"][0], results["distances"][0]
+        )):
+            print(f"\n  [{i+1}] dist={dist:.4f} | {meta['title'][:50]}")
+            print(f"      Section: {meta['section']}")
+            print(f"      Preview: {doc[:100]}...")
 
 
 if __name__ == "__main__":

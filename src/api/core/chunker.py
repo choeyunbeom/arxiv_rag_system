@@ -20,7 +20,7 @@ PROCESSED_DIR = Path("data/processed")
 PARSED_FILE = PROCESSED_DIR / "papers_parsed.json"
 CHUNKS_FILE = PROCESSED_DIR / "chunks.json"
 
-CHUNK_SIZE = 128
+CHUNK_SIZE = 200
 CHUNK_OVERLAP = 64
 
 EXCLUDED_SECTIONS = {
