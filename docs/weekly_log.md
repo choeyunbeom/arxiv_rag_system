@@ -319,6 +319,66 @@ Moved `RAGChain` initialisation from lazy `Depends()` in query router to FastAPI
 - All code pushed to GitHub
 
 ---
+### Day 4 (2025-02-28)
+
+#### Synthetic Q&A Dataset Generation for Fine-Tuning
+
+Built a data generation pipeline to create training data for QLoRA fine-tuning. The dataset is designed to teach Qwen3 4B three specific RAG behaviours that the base model handles poorly.
+
+**Problem Analysis**: Before generating data, tested the base model's weaknesses:
+1. **Over-generalisation**: When asked "What hyperparameters should I use for QLoRA?", the model presents one paper's specific settings as universal recommendations
+2. **Excessive formatting**: Comparison questions produce markdown headers (`#`, `##`) instead of prose paragraphs
+3. **Refusal**: Already handled well — model correctly refuses when context lacks relevant information
+
+**Data Types**:
+
+| Type | Count | Purpose |
+|------|-------|---------|
+| Grounded (60%) | 1,200 | Context-only answering with paper attribution |
+| Synthesis (20%) | 397 | Multi-paper comparison in prose |
+| Refusal (20%) | 400 | Proper refusal when context is insufficient |
+| **Total** | **1,997** | **0 generation failures** |
+
+**Implementation Details** (`src/finetuning/generate_qa_dataset.py`):
+- Input: 2,886 chunks from 132 papers
+- Chunk text truncated to 500 characters (Type 1/3) or 400 characters (Type 2) to keep generation fast
+- Ollama `format: json` parameter forces JSON-structured output; model generates JSON inside the `thinking` field, which is extracted by the pipeline
+- Generation speed: ~33 pairs/min (1,997 pairs in 67 minutes)
+
+**Qwen3 Thinking Mode Challenge**: Significant debugging required to achieve reliable JSON generation. The `thinking` feature in Qwen3 consumes output tokens for internal reasoning before producing visible output. With `num_predict: 512`, the model would exhaust all tokens on thinking and return empty responses. Key discovery: combining `format: json` with `num_predict: 4096` causes the model to produce structured JSON within its thinking field, which can be extracted programmatically. This reduced generation time from ~60s/pair to ~2s/pair.
+
+**Data Quality**: All three types validated by manual inspection of random samples. Grounded answers correctly cite paper titles, synthesis answers reference both papers, and refusal answers explain what information is and is not available in the context.
+
+#### Code Quality Refactoring
+
+Applied fixes from code review:
+
+**Critical (4)**:
+- `pyproject.toml`: added missing dependencies (pydantic-settings, rank-bm25, sentence-transformers, pymupdf4llm)
+- `config.py`: replaced deprecated `class Config` with `model_config = SettingsConfigDict()`; added `PROJECT_ROOT` and `DATA_DIR`
+- `indexer.py`: replaced `os.getenv()` with centralised `settings`
+- `query.py`: changed `async def` to `def` to avoid event loop blocking; lazy `RAGChain` init via `Depends`, later migrated to FastAPI `lifespan` event for pre-loading
+
+**Improvements (5)**:
+- All hardcoded paths replaced with `DATA_DIR` from config
+- `chunker.py`: lazy tokeniser loading to avoid import-time side effects
+- `llm_client.py` and `hybrid_retriever.py`: persistent `httpx.Client` for connection pooling
+- Removed unused `retriever.py` (replaced by `hybrid_retriever.py`)
+- Granular error handling in query endpoint (503/504/400/500)
+
+**Additional Fixes**:
+- `indexer.py`: replaced silent `except Exception: pass` with `logging.warning`
+- `rag_chain.py`: aligned source deduplication with retriever logic (`arxiv_id::section`)
+- `main.py`: RAGChain moved to FastAPI `lifespan` event — heavy resources (ChromaDB, BM25, CrossEncoder) pre-loaded at server startup, eliminating cold start on first request
+
+#### End of Day Status
+- 1,997 RAG-specialised Q&A pairs generated (0 failures)
+- Code quality refactoring complete (9 fixes applied)
+- FastAPI lifespan pre-loading implemented
+- QLoRA fine-tuning prepared (Colab notebook + local LoRA both explored)
+- Fine-tuning execution deferred to Day 5
+- All code pushed to GitHub
+---
 
 ## Week 2 (TBD)
 
