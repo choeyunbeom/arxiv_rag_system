@@ -375,7 +375,6 @@ Applied fixes from code review:
 - 1,997 RAG-specialised Q&A pairs generated (0 failures)
 - Code quality refactoring complete (9 fixes applied)
 - FastAPI lifespan pre-loading implemented
-- QLoRA fine-tuning prepared (Colab notebook + local LoRA both explored)
 - Fine-tuning execution deferred to Day 5
 - All code pushed to GitHub
 ---
