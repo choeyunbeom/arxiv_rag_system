@@ -18,11 +18,11 @@ Ask a question in natural language → the system retrieves relevant papers → 
                                              │
                      ┌───────────────────────┼───────────────────────┐
                      │                       │                       │
-          ┌──────────▼──────────┐ ┌──────────▼──────────┐           │
-          │   ChromaDB Vector   │ │    BM25 Keyword     │           │
-          │   Search (Top-40)   │ │   Search (Top-40)   │           │
-          │  mxbai-embed-large  │ │     rank_bm25       │           │
-          └──────────┬──────────┘ └──────────┬──────────┘           │
+          ┌──────────▼──────────┐ ┌──────────▼──────────┐            │
+          │   ChromaDB Vector   │ │    BM25 Keyword     │            │
+          │   Search (Top-40)   │ │   Search (Top-40)   │            │
+          │  mxbai-embed-large  │ │     rank_bm25       │            │
+          └──────────┬──────────┘ └──────────┬──────────┘            │
                      │                       │                       │
                      └───────────┬───────────┘                       │
                                  │                                   │
@@ -49,8 +49,8 @@ Ask a question in natural language → the system retrieves relevant papers → 
                           └──────────────────┬──────────────────────┘
                                              │
                           ┌──────────────────▼──────────────────────┐
-                          │          Streamlit Frontend              │
-                          │   Answer + Source cards with arXiv links │
+                          │         Streamlit Frontend              │
+                          │  Answer + Source cards with arXiv links │
                           └─────────────────────────────────────────┘
 ```
 
@@ -263,6 +263,7 @@ For full experiment data and debugging notes:
 - [Weekly Development Log](docs/weekly_log.md)
 - [Embedding Model Debugging](docs/embedding_model_debugging.md)
 - [Retrieval Optimisation Experiments](docs/retrieval_optimisation.md)
+- [Fine-Tuning Experiment Log](docs/finetuning_experiment.md)
 
 ## License
 

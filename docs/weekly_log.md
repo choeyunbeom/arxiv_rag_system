@@ -388,42 +388,34 @@ Executed LoRA fine-tuning on the Qwen3 4B base model using the 1,997 synthetic Q
 - Hardware: Apple M4 Pro 48GB, MPS backend
 - Method: LoRA (not QLoRA — bitsandbytes 4-bit quantisation is unstable on MPS, used bf16 instead)
 - LoRA config: r=16, α=32, dropout=0.05, targeting all attention + MLP projections (q/k/v/o_proj, gate/up/down_proj)
-- Training: 3 epochs, batch_size=2, gradient_accumulation=8 (effective batch=16), cosine LR schedule (2e-4), warmup 5%
-- Framework: trl 0.29.0 SFTTrainer with SFTConfig
-- Data format: instruction→system, input→user, output→assistant via Qwen3 chat template
-- Token lengths: min 257, max 841, mean 377 (all within 2048 max_length)
+- Trainable parameters: 33,030,144 / 4,055,498,240 (**0.81%**)
+- Framework: trl 0.29.0 SFTTrainer with SFTConfig, PEFT 0.15.1
+- Data split: Train 1,897 / Eval 100
 
 **Training Results**:
 
-| Epoch | Train Loss | Validation Loss |
-|-------|-----------|-----------------|
-| 1 | 1.106 | 1.118 |
-| 2 | 1.023 | **1.060** |
-| 3 | 0.882 | 1.064 |
+| Epoch | Train Loss | Validation Loss | Notes |
+|-------|-----------|-----------------|-------|
+| 1 | 1.1056 | 1.1180 | Baseline convergence |
+| 2 | 1.0227 | **1.0602** | Best checkpoint ← |
+| 3 | 0.8818 | 1.0640 | Slight overfitting |
 
-Best model at epoch 2 (val_loss 1.060). Slight overfitting at epoch 3 (val_loss increased). `load_best_model_at_end=True` automatically loaded epoch 2 checkpoint. Total training time: ~4.5 hours (0.02 it/s, ~50s/step).
+- Total training time: **24,626 seconds (410 min, ~6.8 hours)**
+- Throughput: 0.231 samples/sec (~50s/step)
+- Best model at epoch 2 (auto-selected via `load_best_model_at_end=True`)
 
-**Sanity Test**: Fine-tuned model correctly answered a test question about LoRA using only provided context, with concise prose output and no markdown formatting.
+#### Model Conversion & Ollama Deployment
 
-#### Model Conversion & Deployment
+1. **LoRA Merge**: `PeftModel.merge_and_unload()` — merged base + adapter weights
+2. **Tokenizer Fix**: `save_pretrained()` only saves weights, not tokenizer files — manually copied tokenizer.json, tokenizer_config.json, vocab.json, merges.txt from base model
+3. **GGUF Conversion**: llama.cpp `convert_hf_to_gguf.py` → Q8_0 quantisation (4.27 GB). `q4_K_M` not supported by converter — requires separate `llama-quantize`
+4. **Ollama Registration**: `ollama create qwen3-4b-rag -f Modelfile`
 
-Converted the fine-tuned model for Ollama serving:
-
-1. **LoRA Merge**: Merged base model + LoRA adapter weights using `PeftModel.merge_and_unload()`
-2. **Tokenizer Copy**: Manually copied tokenizer files (tokenizer.json, tokenizer_config.json, vocab.json, merges.txt) to merged model directory — `save_pretrained()` only saves model weights, not tokenizer
-3. **GGUF Conversion**: Used llama.cpp `convert_hf_to_gguf.py` with Q8_0 quantisation (4.27GB output). Note: Q4_K_M not supported by the conversion script — requires a separate quantisation step via `llama-quantize`
-4. **Ollama Registration**: Created Modelfile and registered as `qwen3-4b-rag`
-
-**Issues Encountered**:
-- `sentencepiece` module not found in venv — installed separately
-- BPE pre-tokenizer warning during conversion — resolved by copying base model tokenizer files
-- llama.cpp cloned to project root, added to `.gitignore`, deleted after conversion
+**Sanity Test**: Fine-tuned model correctly answered "What is QLoRA?" using only provided context, with concise prose and no markdown formatting.
 
 #### Comparative Evaluation
 
-Ran the same 15-question evaluation pipeline on both base and fine-tuned models under identical conditions.
-
-**Results**:
+Ran the same 15-question benchmark on both base and fine-tuned models under identical conditions.
 
 | Metric | Base Model | Fine-Tuned | Change |
 |--------|-----------|------------|--------|
@@ -433,36 +425,36 @@ Ran the same 15-question evaluation pipeline on both base and fine-tuned models 
 | MRR | 0.82 | 0.82 | — |
 | Avg Latency | 20.3s | 22.0s | +1.7s |
 
-**The fine-tuned model underperformed the base model.** Per-question analysis:
-- 1 empty response on the Ragas evaluation question (3 words only, 33.6s latency — likely exhausted tokens on `<think>` reasoning)
+**The fine-tuned model underperformed the base model.** Per-question analysis revealed:
+- 1 empty response on Ragas question (3 words, 33.6s latency — token budget exhausted on `<think>` reasoning)
 - Lower keyword coverage across most questions — model became more concise but evaluation metric penalises shorter answers
+- QLoRA topic was the only question where fine-tuned model scored higher (83% → 100%)
 
 **Root Cause Analysis**:
-1. Catastrophic forgetting: 4B model + 2,000 training examples shifts style but degrades topic coverage
-2. Evaluation metric mismatch: keyword matching penalises concise answers; semantic metrics (BERTScore) would better capture quality
-3. Quantisation gap: base model uses Q4_K_M, fine-tuned uses Q8_0 — different quantisation affects generation
-4. Thinking mode interaction: `/no_think` prompt injection calibrated for base model weights, less effective after LoRA
+1. **Catastrophic forgetting**: 4B model + 2K training examples shifts style but degrades topic coverage
+2. **Evaluation metric mismatch**: keyword matching penalises concise answers; semantic metrics (BERTScore) would better capture quality
+3. **Quantisation gap**: base uses Q4_K_M, fine-tuned uses Q8_0 — not an apples-to-apples comparison
+4. **Thinking mode interaction**: `/no_think` calibrated for base weights, less effective after LoRA
 
-#### README Documentation
+> For full training details, per-question comparison, and improvement proposals, see [Fine-Tuning Experiment Log](finetuning_experiment.md).
 
-Wrote comprehensive README.md including:
-- ASCII architecture diagram of the full pipeline
-- Retrieval optimisation journey (60% → 100% Hit Rate)
-- Honest fine-tuning results with detailed failure analysis
-- Engineering decisions with rationale (embedding selection, token chunking, hybrid retrieval)
-- Complete setup and installation guide
-- Development timeline
+#### README & Documentation
+
+- Wrote comprehensive README.md: ASCII architecture diagram, retrieval optimisation journey, honest fine-tuning results with failure analysis, engineering decisions, setup guide
+- Created `docs/finetuning_experiment.md`: full experiment documentation with training config, conversion pipeline, per-question evaluation comparison, root cause analysis, and 7 improvement proposals
+- Decision: **serve base Qwen3-4B model** in production — fine-tuned model does not justify the regression
 
 #### Code Cleanup
-- Removed `src/finetuning/data/` (duplicate empty directory)
-- Updated `.gitignore` with model directories (base_model, finetuned_lora, finetuned_model)
+- Removed empty directories (`src/finetuning/data/`, `data/finetuned_model/`)
 - Cleaned up llama.cpp after GGUF conversion
+- Updated `.gitignore`: added `*.gguf`, `src/finetuning/.ipynb_checkpoints/`
+- Removed tracked `.ipynb_checkpoints` via `git rm --cached`
 
 #### End of Day Status
-- LoRA fine-tuning complete, best model at epoch 2
-- Fine-tuned model deployed to Ollama as `qwen3-4b-rag`
-- Comparative evaluation shows base model outperforms fine-tuned (honest result documented)
-- README.md written with architecture, results, and failure analysis
+- LoRA fine-tuning complete, best model at epoch 2 (val_loss 1.060)
+- Fine-tuned model deployed to Ollama as `qwen3-4b-rag` (available but not default)
+- Comparative evaluation documented — base model retained as default
+- README.md and fine-tuning experiment doc written
 - All code pushed to GitHub
 ---
 ## Week 2 (TBD)
