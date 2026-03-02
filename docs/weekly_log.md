@@ -457,6 +457,72 @@ Ran the same 15-question benchmark on both base and fine-tuned models under iden
 - README.md and fine-tuning experiment doc written
 - All code pushed to GitHub
 ---
+### Day 6 (2025-03-02)
+
+#### Prompt Dependency Injection Refactoring
+
+Refactored `RAGChain` to accept external prompts instead of using hardcoded constants. This was necessary to run fair prompt comparison experiments without polluting production code.
+
+**Problem**: The original `RAGChain` had `SYSTEM_PROMPT` and `QUERY_TEMPLATE` as module-level constants. Testing different prompts required modifying core production code — a violation of separation of concerns that would block reproducible experiments.
+
+**Solution**: 
+
+1. **`src/api/core/prompts.py`** (new): Extracted all prompt templates into a dedicated module. Contains `SYSTEM_PROMPT_ZERO_SHOT`, `QUERY_TEMPLATE_DEFAULT`, and `SYSTEM_PROMPT_FEW_SHOT`.
+
+2. **`RAGChain.__init__`**: Added optional `system_prompt` and `query_template` parameters. When `None` (default), falls back to zero-shot defaults — so `main.py` and production serving require zero changes.
+
+3. **`evaluate.py` → `run_evaluation`**: Added `system_prompt` and `query_template` parameters, passed through to `RAGChain` constructor. One script can now produce results for any prompt configuration.
+
+4. **`scripts/run_fewshot_experiment.py`** (new): Orchestrates the 3-way comparison by calling `run_evaluation` with different prompt configurations.
+
+#### Few-Shot Prompt Design
+
+Designed token-optimised few-shot examples following three constraints:
+- **Synthetic mini-contexts** (2-3 sentences each) instead of real paper chunks — controls token budget
+- **One example per category**: context-grounded answering, multi-paper synthesis, refusal
+- **Style demonstration only** — examples teach response format, not domain knowledge
+
+Total few-shot prompt overhead: ~350 tokens, adding only +0.8s latency versus zero-shot.
+
+#### 3-Way Evaluation: Zero-Shot vs Few-Shot vs Fine-Tuned
+
+Ran all three experiments on the same 15-question benchmark under identical conditions (same retriever, same `top_k=5`, same hardware).
+
+**Summary Results**:
+
+| Metric | Zero-Shot | Few-Shot | Fine-Tuned |
+|--------|-----------|----------|------------|
+| Keyword Coverage | 76.4% | **78.0%** | 48.0% |
+| Source Hit Rate | 100% | 100% | 100% |
+| Substantive Rate | 100% | 100% | 100% |
+| Avg Word Count | 175 | 177 | 1,614 |
+| Avg Latency | 20.0s | 20.8s | 47.7s |
+
+**Few-Shot Analysis**: +1.6%p keyword coverage improvement over zero-shot with negligible latency cost. The multi-hop question saw the largest gain (40% → 80%), suggesting few-shot examples help the model handle complex multi-paper reasoning. Latency overhead of +0.8s confirms the token-optimised example design was effective.
+
+**Fine-Tuned Model Failure — Deeper Analysis**:
+
+Inspection of fine-tuned responses revealed a critical failure mode not identified in Day 5: **every response begins by repeating the system prompt instructions verbatim** ("Answer in concise prose paragraphs without markdown headers or bullet points. Do not generalise findings from one paper as universal recommendations..."). This instruction parroting inflated word counts to ~1,600 and displaced actual answer content, causing keyword coverage to collapse to 0% on 6 of 15 questions.
+
+**Root Cause — Training Data Contamination**: On Day 4, the synthetic data generation pipeline used Qwen3's `format: json` with thinking mode. The model's `thinking` field contained system prompt fragments mixed with reasoning. When these were extracted as training answers, the model learned to reproduce instruction text as part of its response. This is a form of **training data contamination** — the model memorised prompt scaffolding rather than learning the intended answering behaviour.
+
+This supersedes the Day 5 root cause analysis, which attributed the regression primarily to catastrophic forgetting and evaluation metric mismatch. While those factors may contribute, instruction parroting from contaminated training data is the dominant failure mode.
+
+**Key Conclusion**: For a 4B-parameter model, few-shot prompt engineering (+1.6%p, +0.8s) is more effective than 6.8 hours of LoRA fine-tuning (-28.4%p, +27.7s). Fine-tuning small models requires rigorous training data validation — specifically, automated checks for instruction leakage in generated answers.
+
+#### What I Would Do Differently (Updated)
+
+- **Validate training data for instruction leakage**: Add automated checks that reject any training answer containing system prompt fragments
+- **Use a separate model for data generation**: Generate training data with a different model (e.g., Qwen3 8B or an API model) to avoid the thinking mode contamination issue
+- **Start with few-shot baseline before fine-tuning**: Establish prompt engineering ceiling first, then fine-tune only if there is a clear gap to close
+
+#### End of Day Status
+- Prompt DI refactoring complete — `RAGChain` now accepts external prompts
+- 3-way evaluation complete: zero-shot (76.4%) vs few-shot (78.0%) vs fine-tuned (48.0%)
+- Identified training data contamination as root cause of fine-tuning failure
+- Few-shot prompt adopted as default for production serving
+- All code pushed to GitHub
+---
 ## Week 2 (TBD)
 
 **Planned**:

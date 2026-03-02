@@ -3,29 +3,14 @@ RAG Chain
 - Combines retriever and LLM into a question-answering pipeline
 - Formats retrieved context into a prompt
 - Returns answer with source citations
+- Accepts external system_prompt / query_template for experiment injection
 """
 
 from dataclasses import dataclass
 
 from src.api.core.hybrid_retriever import HybridRetriever as Retriever, RetrievedChunk
 from src.api.core.llm_client import LLMClient
-
-
-SYSTEM_PROMPT = """You are a helpful research assistant specialising in AI and machine learning.
-Answer questions based ONLY on the provided context from academic papers.
-If the context does not contain enough information to answer, say so honestly.
-Always cite the paper title when referencing specific information.
-Be concise and precise."""
-
-QUERY_TEMPLATE = """Context from relevant papers:
-
-{context}
-
----
-
-Question: {question}
-
-Answer based on the context above. Cite paper titles where appropriate."""
+from src.api.core.prompts import SYSTEM_PROMPT_ZERO_SHOT, QUERY_TEMPLATE_DEFAULT
 
 
 @dataclass
@@ -45,9 +30,15 @@ class RAGResponse:
 
 
 class RAGChain:
-    def __init__(self):
+    def __init__(
+        self,
+        system_prompt: str | None = None,
+        query_template: str | None = None,
+    ):
         self.retriever = Retriever()
         self.llm = LLMClient()
+        self.system_prompt = system_prompt or SYSTEM_PROMPT_ZERO_SHOT
+        self.query_template = query_template or QUERY_TEMPLATE_DEFAULT
 
     def _format_context(self, chunks: list[RetrievedChunk]) -> str:
         """Format retrieved chunks into a context string."""
@@ -83,10 +74,10 @@ class RAGChain:
         context = self._format_context(chunks)
 
         # 3. Build prompt
-        prompt = QUERY_TEMPLATE.format(context=context, question=question)
+        prompt = self.query_template.format(context=context, question=question)
 
         # 4. Generate answer
-        answer = self.llm.generate(prompt=prompt, system=SYSTEM_PROMPT)
+        answer = self.llm.generate(prompt=prompt, system=self.system_prompt)
 
         # 5. Collect sources
         sources = self._deduplicate_sources(chunks)

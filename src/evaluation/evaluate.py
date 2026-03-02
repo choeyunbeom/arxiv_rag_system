@@ -4,6 +4,7 @@ Evaluation Pipeline
 - Retrieval metrics: Hit Rate, MRR, Source Precision
 - Answer metrics: Keyword Coverage, Faithfulness (basic)
 - Outputs a JSON report for baseline vs fine-tuned comparison
+- Supports prompt injection for few-shot / ablation experiments
 """
 
 import json
@@ -117,24 +118,42 @@ def evaluate_answers(rag_chain: RAGChain, dataset: list[dict], top_k: int = 5) -
     }
 
 
-def run_evaluation(top_k: int = 5, label: str = "baseline"):
-    """Run full evaluation and save report."""
+def run_evaluation(
+    top_k: int = 5,
+    label: str = "baseline",
+    system_prompt: str | None = None,
+    query_template: str | None = None,
+) -> dict:
+    """Run full evaluation and save report.
+
+    Args:
+        top_k: Number of retrieved chunks.
+        label: Experiment label used for the output filename.
+        system_prompt: Override the default system prompt. If None, uses
+            the zero-shot default defined in prompts.py.
+        query_template: Override the default query template. If None, uses
+            the default template defined in prompts.py.
+    """
     print(f"\n{'='*60}")
     print(f"  Running evaluation: {label}")
     print(f"  Dataset: {len(EVAL_DATASET)} questions, top_k={top_k}")
+    print(f"  Prompt: {'custom' if system_prompt else 'zero-shot (default)'}")
     print(f"{'='*60}\n")
 
     retriever = Retriever()
-    rag_chain = RAGChain()
+    rag_chain = RAGChain(
+        system_prompt=system_prompt,
+        query_template=query_template,
+    )
 
-    # 1. Retrieval evaluation
+    # 1. Retrieval evaluation (prompt-independent — same for all experiments)
     print("Evaluating retrieval...")
     retrieval_metrics = evaluate_retrieval(retriever, EVAL_DATASET, top_k=top_k)
     print(f"  Hit Rate:  {retrieval_metrics['hit_rate']:.2%}")
     print(f"  MRR:       {retrieval_metrics['mrr']:.4f}")
     print(f"  Precision: {retrieval_metrics['avg_precision']:.2%}")
 
-    # 2. Answer evaluation
+    # 2. Answer evaluation (affected by prompt)
     print("\nEvaluating answers...")
     answer_metrics = evaluate_answers(rag_chain, EVAL_DATASET, top_k=top_k)
     summary = answer_metrics["summary"]
@@ -152,11 +171,13 @@ def run_evaluation(top_k: int = 5, label: str = "baseline"):
         "config": {
             "top_k": top_k,
             "dataset_size": len(EVAL_DATASET),
+            "prompt_type": "custom" if system_prompt else "zero-shot",
         },
         "retrieval": retrieval_metrics,
         "answer": answer_metrics,
     }
 
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     output_path = RESULTS_DIR / f"eval_{label}.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
@@ -166,4 +187,4 @@ def run_evaluation(top_k: int = 5, label: str = "baseline"):
 
 
 if __name__ == "__main__":
-    run_evaluation(top_k=5, label="baseline")
+    run_evaluation(top_k=5, label="baseline_zeroshot")
