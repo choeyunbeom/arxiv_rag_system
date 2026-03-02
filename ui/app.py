@@ -7,7 +7,8 @@ import streamlit as st
 import httpx
 import time
 
-API_URL = "http://localhost:8000"
+import os
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 # --- Page Config ---
 st.set_page_config(
