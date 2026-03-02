@@ -65,18 +65,19 @@ Ask a question in natural language → the system retrieves relevant papers → 
 | + BM25 Hybrid Search | 73% | 0.52 | Reciprocal Rank Fusion with keyword search |
 | **+ Reranker + Dedup** | **100%** | **0.82** | Cross-encoder reranking, section-level dedup |
 
-### LoRA Fine-Tuning
+### Prompt Engineering vs Fine-Tuning
 
-Fine-tuned Qwen3 4B on 1,997 synthetic Q&A pairs targeting three RAG-specific behaviours: context-grounded answering, multi-paper synthesis, and proper refusal handling.
+Compared three answer generation strategies on the same 15-question benchmark under identical retrieval conditions:
 
-| Metric | Base Model | Fine-Tuned | Change |
-|--------|-----------|------------|--------|
-| Keyword Coverage | 80.2% | 71.1% | -9.1%p |
-| Substantive Rate | 100% | 93.3% | -6.7%p |
-| Source Hit Rate | 100% | 100% | — |
-| Avg Latency | 20.3s | 22.0s | +1.7s |
+| Metric | Zero-Shot | Few-Shot | Fine-Tuned |
+|--------|-----------|----------|------------|
+| Keyword Coverage | 76.4% | **78.0%** | 48.0% |
+| Source Hit Rate | 100% | 100% | 100% |
+| Substantive Rate | 100% | 100% | 100% |
+| Avg Word Count | 175 | 177 | 1,614 |
+| Avg Latency | 20.0s | 20.8s | 47.7s |
 
-**The fine-tuned model underperformed the base model.** This is a genuine result that I analyse in detail below — understanding failure modes is as important as achieving improvements. See [Fine-Tuning Analysis](#why-fine-tuning-didnt-improve-metrics) for the full breakdown.
+Few-shot prompt engineering outperformed both zero-shot and fine-tuning. The fine-tuned model suffered from training data contamination — see [Fine-Tuning Analysis](#why-fine-tuning-didnt-improve-metrics) for the full breakdown.
 
 ## Tech Stack
 
@@ -90,12 +91,16 @@ Fine-tuned Qwen3 4B on 1,997 synthetic Q&A pairs targeting three RAG-specific be
 | Backend | FastAPI |
 | Frontend | Streamlit |
 | Fine-Tuning | LoRA via PEFT + trl (SFTTrainer) |
+| CI/CD | GitHub Actions (ruff + pytest) |
+| Deployment | Docker Compose |
+| Testing | pytest (104 tests) |
 | Config | Pydantic Settings |
 
 ## Project Structure
 
 ```
 arxiv_rag_system/
+├── .github/workflows/ci.yml        # GitHub Actions: lint + test on push/PR
 ├── src/
 │   ├── api/
 │   │   ├── core/
@@ -103,9 +108,12 @@ arxiv_rag_system/
 │   │   │   ├── hybrid_retriever.py  # Dense + BM25 + reranker pipeline
 │   │   │   ├── llm_client.py        # Ollama API wrapper
 │   │   │   ├── rag_chain.py         # Retrieval → Generation orchestrator
+│   │   │   ├── prompts.py           # Prompt templates (zero-shot, few-shot)
 │   │   │   └── chunker.py           # Token-aware chunking with quality filters
 │   │   ├── models/schemas.py        # Request/response Pydantic models
-│   │   ├── routers/                 # FastAPI route handlers
+│   │   ├── routers/
+│   │   │   ├── query.py             # POST /query endpoint
+│   │   │   └── health.py            # GET /health endpoint
 │   │   └── main.py                  # App entry with lifespan pre-loading
 │   ├── ingestion/
 │   │   ├── arxiv_crawler.py         # arXiv API crawler with retry logic
@@ -116,13 +124,25 @@ arxiv_rag_system/
 │   │   └── evaluate.py              # Automated retrieval + answer metrics
 │   └── finetuning/
 │       ├── generate_qa_dataset.py   # Synthetic Q&A generation pipeline
-│       └── finetune_lora.ipynb     # LoRA training notebook
+│       └── finetune_lora.ipynb      # LoRA training notebook
+├── scripts/
+│   └── run_fewshot_experiment.py    # 3-way prompt comparison orchestrator
+├── tests/
+│   ├── test_chunker.py              # 33 unit tests
+│   ├── test_llm_client.py           # 16 unit tests
+│   ├── test_rag_chain.py            # 17 unit tests
+│   ├── test_hybrid_retriever.py     # 19 unit tests
+│   └── test_api_integration.py      # 19 integration tests
 ├── ui/app.py                        # Streamlit frontend
 ├── data/
 │   ├── raw/                         # 132 arXiv PDFs
 │   ├── processed/                   # Chunks, metadata, eval results
 │   ├── base_model/                  # Qwen3-4B weights (git-ignored)
-│   └── finetuned_lora/              # LoRA adapter + metrics (git-ignored)
+│   └── finetuned_lora/              # LoRA adapter + checkpoints (git-ignored)
+├── Dockerfile.api                   # FastAPI backend container
+├── Dockerfile.ui                    # Streamlit frontend container
+├── docker-compose.yml               # Full-stack deployment
+├── Makefile                         # Dev shortcuts
 └── docs/                            # Detailed experiment logs
 ```
 
@@ -131,41 +151,47 @@ arxiv_rag_system/
 ### Prerequisites
 
 - Python 3.11+
-- Docker Desktop (for ChromaDB)
+- Docker Desktop
 - Ollama (for LLM + embeddings)
 
-### Installation
+### Quick Start (Docker Compose)
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/arxiv_rag_system.git
+git clone https://github.com/choeyunbeom/arxiv_rag_system.git
 cd arxiv_rag_system
 
+# Pull Ollama models (must run on host for Metal GPU)
+ollama pull qwen3:4b
+ollama pull mxbai-embed-large
+
+# Start all services
+docker compose up --build
+```
+
+The API is available at `http://localhost:8000/docs` and the UI at `http://localhost:8501`.
+
+### Local Development
+
+```bash
 # Create virtual environment
 uv venv && source .venv/bin/activate
 
 # Install dependencies
-uv pip install -e .
+uv pip install -e ".[dev]"
 
-# Start ChromaDB
-docker compose up -d
+# Start ChromaDB only
+docker compose up chromadb -d
 
-# Pull models
-ollama pull qwen3:4b
-ollama pull mxbai-embed-large
-```
-
-### Running
-
-```bash
 # Start the API server
 uvicorn src.api.main:app --reload
 
 # Start the UI (in another terminal)
 streamlit run ui/app.py
-```
 
-The API is available at `http://localhost:8000/docs` and the UI at `http://localhost:8501`.
+# Run tests
+pytest tests/ -v
+```
 
 ### Data Pipeline
 
@@ -207,6 +233,10 @@ Academic queries contain domain-specific terms (QLoRA, NF4, RAGAS) where exact k
 
 A bi-encoder retriever scores query-document pairs independently. A cross-encoder jointly attends to both, producing much more accurate relevance scores at the cost of speed. By using the cross-encoder only on the top-40 candidates from hybrid search, we get high-quality reranking with minimal latency overhead (+1.3s for a transformative quality improvement from 73% → 100% Hit Rate).
 
+### Few-Shot Prompt Engineering
+
+Designed token-optimised few-shot examples (~350 tokens overhead) covering three RAG behaviours: context-grounded answering, multi-paper synthesis, and refusal. This approach improved keyword coverage by +1.6%p with only +0.8s latency — more effective and far cheaper than 6.8 hours of LoRA fine-tuning that produced a -28.4%p regression.
+
 ## Why Fine-Tuning Didn't Improve Metrics
 
 ### What I Tried
@@ -223,28 +253,21 @@ Training configuration: LoRA (r=16, α=32) on all attention + MLP projections, 3
 
 ### What Happened
 
-The fine-tuned model scored lower on keyword coverage (-9.1%p) and substantive rate (-6.7%p) compared to the base model. Per-question analysis revealed:
+The fine-tuned model scored drastically lower on keyword coverage (-28.4%p) with 8x higher word counts and 2.4x higher latency. Inspection of responses revealed the dominant failure mode: **every response begins by repeating the system prompt instructions verbatim**, inflating word counts to ~1,600 and displacing actual answer content.
 
-- **1 empty response** (Ragas evaluation question): The fine-tuned model likely exhausted output tokens on internal reasoning (`<think>` tags), returning a 3-word truncated answer. The base model's `/no_think` suppression worked more reliably.
-- **Lower keyword coverage across the board**: The model learned to be more concise (as intended), but the keyword-matching evaluation metric penalises shorter answers that omit synonyms or related terms present in the expected keyword lists.
+### Root Cause: Training Data Contamination
 
-### Root Cause Analysis
+The synthetic data generation pipeline (Day 4) used Qwen3's `format: json` with thinking mode enabled. The model's `thinking` field contained system prompt fragments mixed with reasoning. When these were extracted as training answers, the model learned to reproduce instruction text as part of its response — a form of **training data contamination** where the model memorised prompt scaffolding rather than learning the intended answering behaviour.
 
-1. **Catastrophic forgetting in small models**: At 4B parameters, LoRA fine-tuning on 2,000 examples is enough to shift response style but also degrades the model's ability to comprehensively cover a topic. Larger models (7B+) are more resilient to this tradeoff.
-
-2. **Evaluation metric mismatch**: Keyword Coverage measures whether specific terms appear in the answer. The fine-tuned model was trained to produce concise, prose-style answers — exactly the behaviour that reduces keyword recall. A semantic similarity metric (e.g., BERTScore) would better capture answer quality improvements.
-
-3. **Quantisation gap**: The base model runs as Ollama's default `qwen3:4b` (Q4_K_M quantisation), while the fine-tuned model was converted to Q8_0 GGUF. Different quantisation methods can affect generation behaviour independently of the fine-tuning itself.
-
-4. **Thinking mode interaction**: Qwen3's `<think>` reasoning mode behaves differently after fine-tuning. The base model's `/no_think` prompt injection was calibrated for the original model weights and may be less effective after LoRA modification.
+Additional contributing factors include catastrophic forgetting in the 4B model, evaluation metric mismatch (keyword matching penalises concise answers), and quantisation differences between base (Q4_K_M) and fine-tuned (Q8_0) models.
 
 ### What I Would Do Differently
 
-- **Use a larger base model (7B+)** to reduce catastrophic forgetting risk
+- **Validate training data for instruction leakage**: Add automated checks that reject any training answer containing system prompt fragments
+- **Use a separate model for data generation**: Avoid the thinking mode contamination issue by generating data with a different model
+- **Start with few-shot baseline before fine-tuning**: Establish prompt engineering ceiling first, then fine-tune only if there is a clear gap
 - **Add semantic evaluation metrics** (BERTScore, GPT-as-judge) alongside keyword matching
-- **Train with thinking mode explicitly disabled** by including `/no_think` tokens in training data
-- **Use fewer epochs (1-2) with lower learning rate** to minimise forgetting while still imparting style changes
-- **A/B test with human evaluation** to capture qualitative improvements that automated metrics miss
+- **Use a larger base model (7B+)** to reduce catastrophic forgetting risk
 
 ## Development Timeline
 
@@ -255,12 +278,13 @@ The fine-tuned model scored lower on keyword coverage (-9.1%p) and substantive r
 | 3 | Retrieval Optimisation | Hit Rate 60% → 100%, MRR 0.51 → 0.82. Hybrid search + cross-encoder reranking. |
 | 4 | Fine-Tuning Prep | 1,997 synthetic Q&A pairs generated. Code quality refactoring (9 fixes). |
 | 5 | Fine-Tuning & Eval | LoRA training, GGUF conversion, Ollama deployment. Honest evaluation showing regression — analysed root causes. |
+| 6 | Testing & CI/CD | 104 tests (unit + integration). GitHub Actions CI. Docker Compose full-stack deployment. Few-shot experiment revealing training data contamination as fine-tuning root cause. |
 
 ## Detailed Logs
 
 For full experiment data and debugging notes:
 
-- [Weekly Development Log](docs/weekly_log.md)
+- [Development Log](docs/weekly_log.md)
 - [Embedding Model Debugging](docs/embedding_model_debugging.md)
 - [Retrieval Optimisation Experiments](docs/retrieval_optimisation.md)
 - [Fine-Tuning Experiment Log](docs/finetuning_experiment.md)
@@ -271,6 +295,8 @@ For full experiment data and debugging notes:
   but would require ElasticSearch/OpenSearch for larger corpora.
 - **Synchronous Ollama calls**: Embedding and generation use blocking `httpx.Client`. 
   Adequate for single-user demo; multi-user serving would need `httpx.AsyncClient` with async/await.
+- **Ollama not containerised**: Runs on host for Apple Silicon Metal GPU access. 
+  For cloud deployment, would need a GPU-enabled container or API-based LLM service.
 
 ## License
 

@@ -1,6 +1,4 @@
-# Weekly Development Log
-
-## Week 1 — Infrastructure & Data Pipeline
+# Development Log
 
 ### Day 1 (2025-02-25)
 
@@ -465,7 +463,7 @@ Refactored `RAGChain` to accept external prompts instead of using hardcoded cons
 
 **Problem**: The original `RAGChain` had `SYSTEM_PROMPT` and `QUERY_TEMPLATE` as module-level constants. Testing different prompts required modifying core production code — a violation of separation of concerns that would block reproducible experiments.
 
-**Solution**: 
+**Solution**:
 
 1. **`src/api/core/prompts.py`** (new): Extracted all prompt templates into a dedicated module. Contains `SYSTEM_PROMPT_ZERO_SHOT`, `QUERY_TEMPLATE_DEFAULT`, and `SYSTEM_PROMPT_FEW_SHOT`.
 
@@ -516,34 +514,72 @@ This supersedes the Day 5 root cause analysis, which attributed the regression p
 - **Use a separate model for data generation**: Generate training data with a different model (e.g., Qwen3 8B or an API model) to avoid the thinking mode contamination issue
 - **Start with few-shot baseline before fine-tuning**: Establish prompt engineering ceiling first, then fine-tune only if there is a clear gap to close
 
+#### Unit Tests (85 tests)
+
+Wrote comprehensive unit tests for all four core modules:
+
+| Module | Tests | Coverage |
+|--------|-------|----------|
+| `chunker` | 33 | Reference stripping, citation detection, text cleaning, quality filter, chunk ID, token splitting, paper chunking |
+| `llm_client` | 16 | `<think>` tag cleaning (7), payload construction (9): no_think injection, temperature, num_predict, endpoint |
+| `rag_chain` | 17 | Prompt DI (5), context formatting (4), source deduplication (4), full pipeline (4) |
+| `hybrid_retriever` | 19 | Tokenizer (4), RRF fusion (5), deduplication (5), sigmoid normalisation (4) |
+
+All external dependencies (Ollama, ChromaDB, CrossEncoder, HF tokenizer) mocked at module level using `sys.modules` patching. Tests run in 0.82s with zero network requirements.
+
+#### Integration Tests (19 tests)
+
+Tested full HTTP request/response cycle through FastAPI's `TestClient`:
+
+- **POST /query**: successful query, default/custom top_k, validation errors (empty question, short question, missing question, top_k bounds), error handling (503 Ollama unavailable, 504 timeout, 400 bad request, 500 internal error), response schema validation
+- **GET /health**: all healthy, Ollama down, ChromaDB down, both down, schema validation
+- **GET /**: root info endpoint
+
+Key implementation detail: overrode FastAPI lifespan context to inject mock `RAGChain`, avoiding real service initialization during tests.
+
+#### GitHub Actions CI
+
+Created `.github/workflows/ci.yml` triggered on push to `main` and on pull requests:
+
+1. **Lint**: `ruff check src/ tests/` — fixed 60 lint errors across codebase (import sorting, whitespace, unused imports, f-string issues)
+2. **Test**: `pytest tests/ -v` — runs all 104 tests
+
+Added to `pyproject.toml`:
+- `[project.optional-dependencies] dev` — pytest, ruff
+- `[tool.ruff]` — target Python 3.11, line length 120, E/F/I/W rules, per-file E402 ignore for test files
+- `[tool.pytest.ini_options]` — testpaths, pythonpath for CI import resolution
+
+First PR (`feat/ci-cd`) passed CI automatically on GitHub.
+
+#### Docker Compose Full-Stack Deployment
+
+Built one-command deployment for the entire system:
+
+| Service | Image | Port | Notes |
+|---------|-------|------|-------|
+| chromadb | chromadb/chroma:latest | 8200 | Persistent volume for indexed data |
+| api | Dockerfile.api | 8000 | FastAPI + cross-encoder reranker |
+| ui | Dockerfile.ui | 8501 | Streamlit frontend |
+
+**Key design decisions**:
+- **Ollama stays on host**: Metal GPU acceleration requires native execution. API reaches Ollama via `host.docker.internal:11434`
+- **`restart: on-failure`**: Handles startup race condition — if API starts before ChromaDB is ready, it auto-restarts until connection succeeds
+- **Environment-based API_URL**: `ui/app.py` reads `API_URL` from environment variable (default `http://localhost:8000` for local dev, `http://api:8000` in Docker network)
+
+**Deployment**:
+```bash
+docker compose up --build   # Start all services
+curl http://localhost:8000/health  # Verify: {"status":"healthy","ollama":true,"chromadb":true,"collection_count":2885}
+```
+
 #### End of Day Status
-- Prompt DI refactoring complete — `RAGChain` now accepts external prompts
+- Prompt DI refactoring complete — `RAGChain` accepts external prompts
 - 3-way evaluation complete: zero-shot (76.4%) vs few-shot (78.0%) vs fine-tuned (48.0%)
 - Identified training data contamination as root cause of fine-tuning failure
-- Few-shot prompt adopted as default for production serving
+- 104 tests (85 unit + 19 integration), all passing
+- GitHub Actions CI: ruff lint + pytest on every push/PR
+- Docker Compose: one-command full-stack deployment verified
+- Week 2 roadmap complete
 - All code pushed to GitHub
 ---
-## Week 2 (TBD)
 
-**Planned**:
-- QLoRA fine-tuning on synthetic Q&A dataset generated from corpus
-- Post-fine-tuning evaluation comparison
-- Answer quality improvements
-
----
-
-## Week 3 (TBD)
-
-**Planned**:
-- Unit + integration tests
-- CI/CD setup
-- Architecture documentation
-
----
-
-## Week 4 (TBD)
-
-**Planned**:
-- Final README with results and architecture diagram
-- Demo video / screenshots
-- Blog post draft
