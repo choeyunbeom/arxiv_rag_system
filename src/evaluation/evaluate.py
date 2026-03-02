@@ -10,13 +10,13 @@ Evaluation Pipeline
 import json
 import time
 from datetime import datetime
-from pathlib import Path
 
+from src.api.core.config import DATA_DIR
 from src.api.core.hybrid_retriever import HybridRetriever as Retriever
 from src.api.core.rag_chain import RAGChain
 from src.evaluation.eval_dataset import EVAL_DATASET
 
-RESULTS_DIR = Path("data/processed")
+RESULTS_DIR = DATA_DIR / "processed"
 
 
 def evaluate_retrieval(retriever: Retriever, dataset: list[dict], top_k: int = 5) -> dict:

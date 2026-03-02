@@ -1,12 +1,13 @@
-import logging
-
-logger = logging.getLogger(__name__)
 """
 ChromaDB Indexer (v4)
 - Uses mxbai-embed-large for embeddings
 - Batch indexing with individual fallback on failure
 - If a batch fails, tries each chunk individually and skips only the broken ones
 """
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 import json
 
