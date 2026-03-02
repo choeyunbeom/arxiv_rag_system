@@ -7,3 +7,7 @@ data/raw/
 chroma_data/
 .DS_Store
 notebooks/.ipynb_checkpoints/
+data/base_model/
+data/finetuned_lora/
+*.gguf
+src/finetuning/.ipynb_checkpoints/
