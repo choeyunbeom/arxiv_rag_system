@@ -265,6 +265,13 @@ For full experiment data and debugging notes:
 - [Retrieval Optimisation Experiments](docs/retrieval_optimisation.md)
 - [Fine-Tuning Experiment Log](docs/finetuning_experiment.md)
 
+## Known Limitations & Scaling Considerations
+
+- **In-memory BM25**: All chunks loaded into memory. Sufficient for 132 papers (~5K chunks), 
+  but would require ElasticSearch/OpenSearch for larger corpora.
+- **Synchronous Ollama calls**: Embedding and generation use blocking `httpx.Client`. 
+  Adequate for single-user demo; multi-user serving would need `httpx.AsyncClient` with async/await.
+
 ## License
 
 MIT
