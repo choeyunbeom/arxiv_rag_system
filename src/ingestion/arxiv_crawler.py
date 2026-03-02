@@ -5,13 +5,14 @@ arXiv Paper Crawler
 - Download PDFs
 """
 
-import arxiv
 import json
 import time
 from datetime import datetime
+from pathlib import Path
+
+import arxiv
 
 from src.api.core.config import DATA_DIR
-
 
 # ─── Config ─────────────────────────────────────────────
 QUERIES = [
@@ -121,7 +122,7 @@ def main():
         papers = search_papers(query)
         print(f"   Found {len(papers)} papers")
         all_papers.extend(papers)
-        print(f"   Waiting 5s before next query...")
+        print("   Waiting 5s before next query...")
         time.sleep(5)  # Longer delay to avoid rate limits
 
     # Deduplicate

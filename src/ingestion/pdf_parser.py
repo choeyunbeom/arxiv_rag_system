@@ -15,7 +15,6 @@ import pymupdf4llm
 
 from src.api.core.config import DATA_DIR
 
-
 PROCESSED_DIR = DATA_DIR / "processed"
 METADATA_FILE = PROCESSED_DIR / "papers_metadata.json"
 PARSED_FILE = PROCESSED_DIR / "papers_parsed.json"
@@ -151,7 +150,7 @@ def parse_all_papers():
         # Track stats
         if "full_text" in sections:
             section_stats["full_text_only"] += 1
-            print(f" [full_text]")
+            print(" [full_text]")
         else:
             section_stats["sectioned"] += 1
             print(f" [{', '.join(sections.keys())}]")

@@ -10,19 +10,17 @@ Tests cover:
 - Token-based text splitting
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from src.api.core.chunker import (
-    strip_references_from_text,
-    is_citation_text,
-    clean_chunk_text,
-    is_quality_chunk,
-    generate_chunk_id,
-    chunk_text,
     chunk_paper,
+    chunk_text,
+    clean_chunk_text,
+    generate_chunk_id,
+    is_citation_text,
+    is_quality_chunk,
+    strip_references_from_text,
 )
-
 
 # ──────────────────────────────────────────────
 # strip_references_from_text

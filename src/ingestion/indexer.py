@@ -9,13 +9,11 @@ ChromaDB Indexer (v4)
 """
 
 import json
-import time
 
 import chromadb
 import httpx
 
-from src.api.core.config import settings, DATA_DIR
-
+from src.api.core.config import DATA_DIR, settings
 
 PROCESSED_DIR = DATA_DIR / "processed"
 CHUNKS_FILE = PROCESSED_DIR / "chunks.json"

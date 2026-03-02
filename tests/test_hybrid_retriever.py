@@ -11,13 +11,13 @@ External dependencies (ChromaDB, Ollama, CrossEncoder, file I/O)
 are mocked to isolate pure logic.
 """
 
-import sys
-import math
 import json
+import math
+import sys
 from io import StringIO
+from unittest.mock import MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock
 
 # Mock heavy dependencies before importing the module
 _mock_bm25_module = MagicMock()
@@ -28,8 +28,7 @@ sys.modules["sentence_transformers"] = MagicMock()
 # Need to patch BM25Okapi as a class that the module imports
 BM25Okapi = _mock_bm25_module.BM25Okapi
 
-from src.api.core.hybrid_retriever import HybridRetriever, RetrievedChunk
-
+from src.api.core.hybrid_retriever import HybridRetriever
 
 # ──────────────────────────────────────────────
 # Fixtures
@@ -169,7 +168,6 @@ class TestDeduplicate:
         # aaa111 and bbb222 are from same paper but different sections
         scored = [("aaa111", 0.9), ("bbb222", 0.8), ("ccc333", 0.7)]
         result = retriever._deduplicate(scored, top_k=5)
-        ids = [cid for cid, _ in result]
         # All three kept — different arxiv_id::section keys
         assert len(result) == 3
 

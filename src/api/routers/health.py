@@ -3,9 +3,9 @@ Health Router
 - GET /health — check status of all services
 """
 
-from fastapi import APIRouter
-import httpx
 import chromadb
+import httpx
+from fastapi import APIRouter
 
 from src.api.core.config import settings
 from src.api.models.schemas import HealthResponse

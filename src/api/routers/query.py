@@ -3,8 +3,8 @@ Query Router
 - POST /query — answer a question using the RAG pipeline
 """
 
-from fastapi import APIRouter, HTTPException, Request
 import httpx
+from fastapi import APIRouter, HTTPException, Request
 
 from src.api.models.schemas import QueryRequest, QueryResponse, SourceInfo
 

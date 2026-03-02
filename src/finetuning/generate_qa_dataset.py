@@ -8,14 +8,11 @@ RAG-Specialised Q&A Dataset Generator for QLoRA Fine-Tuning
 
 import json
 import random
-import re
 import time
-from pathlib import Path
 
 import httpx
 
-from src.api.core.config import settings, DATA_DIR
-
+from src.api.core.config import DATA_DIR, settings
 
 CHUNKS_FILE = DATA_DIR / "processed" / "chunks.json"
 OUTPUT_FILE = DATA_DIR / "processed" / "qa_dataset.json"
