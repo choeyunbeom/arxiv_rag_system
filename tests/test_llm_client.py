@@ -10,11 +10,11 @@ Tests cover:
 External dependency (Ollama HTTP API) is mocked.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from src.api.core.llm_client import LLMClient
-
 
 # ──────────────────────────────────────────────
 # Fixtures

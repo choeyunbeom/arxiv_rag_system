@@ -12,10 +12,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from src.api.core.rag_chain import RAGChain
 from src.api.core.hybrid_retriever import HybridRetriever as Retriever
+from src.api.core.rag_chain import RAGChain
 from src.evaluation.eval_dataset import EVAL_DATASET
-
 
 RESULTS_DIR = Path("data/processed")
 

@@ -11,12 +11,12 @@ import math
 import re
 from dataclasses import dataclass
 
-from src.api.core.config import settings, DATA_DIR
 import chromadb
 import httpx
 from rank_bm25 import BM25Okapi
 from sentence_transformers import CrossEncoder
 
+from src.api.core.config import DATA_DIR, settings
 
 CHUNKS_FILE = DATA_DIR / "processed" / "chunks.json"
 

@@ -5,10 +5,11 @@ arXiv RAG System API
 """
 
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from src.api.core.rag_chain import RAGChain
-from src.api.routers import query, health
+from src.api.routers import health, query
 
 
 @asynccontextmanager

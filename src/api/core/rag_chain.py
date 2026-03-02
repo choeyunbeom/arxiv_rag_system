@@ -8,9 +8,10 @@ RAG Chain
 
 from dataclasses import dataclass
 
-from src.api.core.hybrid_retriever import HybridRetriever as Retriever, RetrievedChunk
+from src.api.core.hybrid_retriever import HybridRetriever as Retriever
+from src.api.core.hybrid_retriever import RetrievedChunk
 from src.api.core.llm_client import LLMClient
-from src.api.core.prompts import SYSTEM_PROMPT_ZERO_SHOT, QUERY_TEMPLATE_DEFAULT
+from src.api.core.prompts import QUERY_TEMPLATE_DEFAULT, SYSTEM_PROMPT_ZERO_SHOT
 
 
 @dataclass

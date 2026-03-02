@@ -5,9 +5,10 @@ LLM Client
 """
 
 import re
-from src.api.core.config import settings
+
 import httpx
 
+from src.api.core.config import settings
 
 
 class LLMClient:

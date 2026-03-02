@@ -11,11 +11,10 @@ Text Chunker (v5)
 import hashlib
 import json
 import re
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 
 from src.api.core.config import DATA_DIR
-
 
 PROCESSED_DIR = DATA_DIR / "processed"
 PARSED_FILE = PROCESSED_DIR / "papers_parsed.json"
@@ -87,22 +86,22 @@ def is_citation_text(text: str) -> bool:
     """Detect if text is primarily citation/bibliography content."""
     # Count DOI/URL patterns
     doi_count = len(re.findall(r"https?://doi\.org|doi\.org|arxiv\.org", text))
-    
+
     # Count year patterns like (2020) or 2020.
     year_count = len(re.findall(r"\b(19|20)\d{2}\b", text))
-    
+
     # Count patterns like "Author Name. 2023." or "Author Name, 2023"
     author_year = len(re.findall(r"[A-Z][a-z]+[\.,]\s*(19|20)\d{2}", text))
-    
+
     # Count "In _Conference" or "In Proceedings" patterns
     conf_count = len(re.findall(r"(?:In\s+_|In\s+Proc|In\s+\*)", text))
-    
+
     # Count "pp." or "pages" patterns
     page_count = len(re.findall(r"\bpp\.\s*\d|pages?\s*\d", text, re.IGNORECASE))
 
     words = text.split()
     word_count = len(words)
-    
+
     if word_count == 0:
         return True
 
@@ -111,10 +110,10 @@ def is_citation_text(text: str) -> bool:
         return True
     if conf_count >= 2:
         return True
-    
+
     # Combined signal: multiple year references + author-year patterns
     citation_score = doi_count * 3 + author_year * 2 + conf_count * 2 + page_count * 2 + year_count
-    
+
     # If citation density is high relative to text length
     if citation_score > 8 and word_count < 300:
         return True

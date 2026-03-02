@@ -9,22 +9,22 @@ Tests cover:
 """
 
 import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # Mock heavy dependencies before importing modules that need them
 sys.modules["chromadb"] = MagicMock()
 sys.modules["rank_bm25"] = MagicMock()
 sys.modules["sentence_transformers"] = MagicMock()
 
-from src.api.core.rag_chain import RAGChain, RAGResponse, Source
 from src.api.core.hybrid_retriever import RetrievedChunk
 from src.api.core.prompts import (
-    SYSTEM_PROMPT_ZERO_SHOT,
-    SYSTEM_PROMPT_FEW_SHOT,
     QUERY_TEMPLATE_DEFAULT,
+    SYSTEM_PROMPT_FEW_SHOT,
+    SYSTEM_PROMPT_ZERO_SHOT,
 )
-
+from src.api.core.rag_chain import RAGChain, RAGResponse
 
 # ──────────────────────────────────────────────
 # Fixtures
