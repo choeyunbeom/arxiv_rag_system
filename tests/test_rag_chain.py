@@ -185,6 +185,10 @@ class TestQuery:
         assert response.answer == "RAG is a technique."
         assert response.query == "What is RAG?"
         assert len(response.sources) > 0
+        # Verify latency breakdown is populated
+        assert response.latency.retrieval_ms >= 0
+        assert response.latency.generation_ms >= 0
+        assert response.latency.total_ms >= 0
 
     def test_passes_system_prompt_to_llm(self, mock_rag_chain, sample_chunks):
         mock_rag_chain._mock_retriever.search.return_value = sample_chunks

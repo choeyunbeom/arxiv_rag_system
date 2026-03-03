@@ -4,6 +4,14 @@ A Retrieval-Augmented Generation system for querying academic papers from arXiv.
 
 Ask a question in natural language → the system retrieves relevant papers → generates a cited, grounded answer.
 
+## Demo
+
+![Query → answer flow with source citations and latency breakdown](docs/ui_demo.gif)
+![Streamlit UI — interactive Q&A interface with source cards and latency breakdown](docs/main_demo.png)
+![FastAPI Swagger UI — interactive API documentation with example requests and responses](docs/swagger_demo.png)
+
+> The UI shows the full query flow: enter a question → hybrid retrieval searches 132 arXiv papers → cross-encoder reranks results → Qwen3 4B generates a cited answer. Latency breakdown shows retrieval vs generation time.
+
 ## Architecture
 
 ```

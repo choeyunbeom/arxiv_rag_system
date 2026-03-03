@@ -1,6 +1,7 @@
 """
 arXiv RAG System — Streamlit UI
-Interactive Q&A interface over academic papers
+Interactive Q&A interface over academic papers with error handling,
+loading indicators, query history, and latency breakdown display.
 """
 
 import streamlit as st
@@ -9,6 +10,8 @@ import time
 
 import os
 API_URL = os.getenv("API_URL", "http://localhost:8000")
+
+MAX_QUESTION_LENGTH = 500
 
 # --- Page Config ---
 st.set_page_config(
@@ -63,32 +66,140 @@ st.markdown("""
         margin: 16px 0;
         line-height: 1.7;
     }
-    .status-healthy { color: #4CAF50; }
-    .status-degraded { color: #FF9800; }
+    .status-healthy { color: #4CAF50; font-weight: 600; }
+    .status-degraded { color: #FF9800; font-weight: 600; }
+    .status-offline { color: #f44336; font-weight: 600; }
+    .latency-bar {
+        display: flex;
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 4px 0 8px 0;
+    }
+    .latency-retrieval {
+        background: #42A5F5;
+    }
+    .latency-generation {
+        background: #FF7043;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# --- Session state init ---
+if "query_history" not in st.session_state:
+    st.session_state["query_history"] = []
+if "last_question" not in st.session_state:
+    st.session_state["last_question"] = ""
+
+
+# --- Helper functions ---
+def check_api_health():
+    """Check API health and return status dict or None if unreachable."""
+    try:
+        health = httpx.get(f"{API_URL}/health", timeout=5.0).json()
+        return health
+    except Exception:
+        return None
+
+
+def render_latency_breakdown(latency: dict):
+    """Render a visual latency breakdown bar and metrics."""
+    retrieval = latency.get("retrieval_ms", 0)
+    generation = latency.get("generation_ms", 0)
+    total = latency.get("total_ms", 0)
+
+    if total <= 0:
+        return
+
+    ret_pct = (retrieval / total) * 100
+    gen_pct = (generation / total) * 100
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Retrieval", f"{retrieval / 1000:.1f}s")
+    col2.metric("Generation", f"{generation / 1000:.1f}s")
+    col3.metric("Total", f"{total / 1000:.1f}s")
+
+    st.markdown(f"""
+    <div class="latency-bar">
+        <div class="latency-retrieval" style="width: {ret_pct:.1f}%;" title="Retrieval: {retrieval:.0f}ms"></div>
+        <div class="latency-generation" style="width: {gen_pct:.1f}%;" title="Generation: {generation:.0f}ms"></div>
+    </div>
+    <span style="font-size: 0.75rem; color: #888;">
+        🔵 Retrieval ({ret_pct:.0f}%) · 🟠 Generation ({gen_pct:.0f}%)
+    </span>
+    """, unsafe_allow_html=True)
+
+
+def render_sources(sources: list):
+    """Render source cards with safe field access."""
+    st.markdown("### 📄 Sources")
+
+    if not sources:
+        st.info("No sources were retrieved for this query.")
+        return
+
+    for source in sources:
+        title = source.get("title", "Untitled")
+        arxiv_id = source.get("arxiv_id", "unknown")
+        section = source.get("section", "N/A")
+        authors = source.get("authors", "Unknown authors")
+        distance = source.get("distance", 1.0)
+
+        relevance = max(0, (1 - distance) * 100)
+        arxiv_url = f"https://arxiv.org/abs/{arxiv_id}"
+
+        st.markdown(f"""
+        <div class="source-card">
+            <div class="source-title">
+                <a href="{arxiv_url}" target="_blank">{title}</a>
+                <span class="distance-badge">{relevance:.0f}% relevant</span>
+            </div>
+            <div class="source-meta">
+                {authors} · Section: {section} ·
+                <a href="{arxiv_url}" target="_blank">arXiv:{arxiv_id}</a>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown("### Settings")
+    st.markdown("### ⚙️ Settings")
     top_k = st.slider("Number of sources", min_value=1, max_value=15, value=5)
 
     st.markdown("---")
 
-    # Health check
+    # Health check with status badge
     st.markdown("### System Status")
-    try:
-        health = httpx.get(f"{API_URL}/health", timeout=5.0).json()
-        ollama_status = "Online" if health["ollama"] else "Offline"
-        chroma_status = "Online" if health["chromadb"] else "Offline"
+    health = check_api_health()
 
-        st.markdown(f"**Ollama**: {ollama_status}")
-        st.markdown(f"**ChromaDB**: {chroma_status}")
-        st.markdown(f"**Indexed chunks**: {health['collection_count']:,}")
-    except Exception:
-        st.markdown("API server unreachable")
-        st.markdown(f"Make sure the API is running at `{API_URL}`")
+    if health is None:
+        st.markdown('<span class="status-offline">🔴 API Offline</span>', unsafe_allow_html=True)
+        st.caption(f"Make sure the API is running at `{API_URL}`")
+    else:
+        overall = health.get("status", "unknown")
+        if overall == "healthy":
+            st.markdown('<span class="status-healthy">🟢 All Systems Healthy</span>', unsafe_allow_html=True)
+        else:
+            st.markdown('<span class="status-degraded">🟡 Degraded</span>', unsafe_allow_html=True)
+
+        ollama_icon = "✅" if health.get("ollama") else "❌"
+        chroma_icon = "✅" if health.get("chromadb") else "❌"
+        st.markdown(f"**Ollama**: {ollama_icon}")
+        st.markdown(f"**ChromaDB**: {chroma_icon}")
+
+        count = health.get("collection_count", 0)
+        st.markdown(f"**Indexed chunks**: {count:,}")
+
+    st.markdown("---")
+
+    # Query history
+    if st.session_state["query_history"]:
+        st.markdown("### 🕐 Recent Queries")
+        for i, q in enumerate(reversed(st.session_state["query_history"][-5:])):
+            truncated = q[:60] + "..." if len(q) > 60 else q
+            if st.button(truncated, key=f"hist_{i}", use_container_width=True):
+                st.session_state["question"] = q
 
     st.markdown("---")
     st.markdown("### 📖 About")
@@ -130,56 +241,118 @@ question = st.text_input(
     value=st.session_state.get("question", ""),
     placeholder="e.g., What is QLoRA and how does it work?",
     label_visibility="collapsed",
+    max_chars=MAX_QUESTION_LENGTH,
 )
 
-if st.button("🔍 Ask", type="primary", use_container_width=True) or (
+# Input validation feedback
+if question and len(question) > MAX_QUESTION_LENGTH * 0.9:
+    st.caption(f"⚠️ {len(question)}/{MAX_QUESTION_LENGTH} characters")
+
+# Action buttons
+btn_col1, btn_col2 = st.columns([4, 1])
+with btn_col1:
+    ask_clicked = st.button("🔍 Ask", type="primary", use_container_width=True)
+with btn_col2:
+    if st.button("🗑️ Clear", use_container_width=True):
+        st.session_state["question"] = ""
+        st.session_state["last_question"] = ""
+        st.rerun()
+
+# --- Query execution ---
+should_query = ask_clicked or (
     question and question != st.session_state.get("last_question", "")
-):
-    if not question:
-        st.warning("Please enter a question.")
+)
+
+if should_query:
+    if not question or not question.strip():
+        st.warning("⚠️ Please enter a question.")
+    elif len(question.strip()) < 3:
+        st.warning("⚠️ Question is too short. Please enter at least 3 characters.")
     else:
         st.session_state["last_question"] = question
 
-        with st.spinner("Searching papers and generating answer..."):
+        # Add to history (avoid duplicates)
+        history = st.session_state["query_history"]
+        if not history or history[-1] != question:
+            history.append(question)
+            # Keep only last 10
+            st.session_state["query_history"] = history[-10:]
+
+        with st.status("Processing your question...", expanded=True) as status:
+            st.write("🔍 Searching papers with hybrid retrieval...")
             start = time.time()
+
             try:
                 response = httpx.post(
                     f"{API_URL}/query",
                     json={"question": question, "top_k": top_k},
                     timeout=120.0,
                 )
-                response.raise_for_status()
-                data = response.json()
                 elapsed = time.time() - start
 
-                # Answer
-                st.markdown("### 💡 Answer")
-                st.markdown(
-                    f'<div class="answer-box">{data["answer"]}</div>',
-                    unsafe_allow_html=True,
-                )
-                st.caption(f"Generated in {elapsed:.1f}s")
+                st.write("📊 Reranking and deduplicating results...")
 
-                # Sources
-                st.markdown("### Sources")
-                for source in data["sources"]:
-                    relevance = max(0, (1 - source["distance"]) * 100)
-                    arxiv_url = f"https://arxiv.org/abs/{source['arxiv_id']}"
+                # Handle HTTP errors
+                if response.status_code == 422:
+                    status.update(label="Validation Error", state="error")
+                    st.error("❌ Invalid input. Please check your question and try again.")
+                elif response.status_code == 503:
+                    status.update(label="Service Unavailable", state="error")
+                    st.error(
+                        "🔌 **Ollama service is unavailable.**\n\n"
+                        "Make sure Ollama is running:\n"
+                        "```bash\nollama serve\n```"
+                    )
+                elif response.status_code == 504:
+                    status.update(label="Timeout", state="error")
+                    st.error(
+                        "⏱️ **LLM generation timed out.**\n\n"
+                        "The model took too long to respond. Try a shorter or simpler question."
+                    )
+                elif response.status_code >= 400:
+                    status.update(label="Error", state="error")
+                    detail = response.json().get("detail", "Unknown error")
+                    st.error(f"❌ Server error ({response.status_code}): {detail}")
+                else:
+                    data = response.json()
+                    st.write("💡 Generating answer with Qwen3...")
+                    status.update(label=f"Done in {elapsed:.1f}s", state="complete")
 
-                    st.markdown(f"""
-                    <div class="source-card">
-                        <div class="source-title">
-                            <a href="{arxiv_url}" target="_blank">{source['title']}</a>
-                            <span class="distance-badge">{relevance:.0f}% relevant</span>
-                        </div>
-                        <div class="source-meta">
-                            {source['authors']} · Section: {source['section']} · 
-                            <a href="{arxiv_url}" target="_blank">arXiv:{source['arxiv_id']}</a>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    # Answer
+                    st.markdown("### 💡 Answer")
+                    st.markdown(
+                        f'<div class="answer-box">{data["answer"]}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    # Latency breakdown
+                    if "latency" in data and data["latency"]:
+                        with st.expander("⏱️ Latency Breakdown", expanded=False):
+                            render_latency_breakdown(data["latency"])
+
+                    # Sources
+                    render_sources(data.get("sources", []))
 
             except httpx.ConnectError:
-                st.error("Cannot connect to the API server. Make sure it's running on port 8000.")
+                status.update(label="Connection Failed", state="error")
+                st.error(
+                    "🔌 **Cannot connect to the API server.**\n\n"
+                    f"Make sure it's running at `{API_URL}`:\n"
+                    "```bash\nuvicorn src.api.main:app --reload\n```"
+                )
+            except httpx.TimeoutException:
+                status.update(label="Request Timeout", state="error")
+                st.error(
+                    "⏱️ **Request timed out** after 120 seconds.\n\n"
+                    "The server may be overloaded. Try again or use a simpler question."
+                )
+            except httpx.HTTPStatusError as e:
+                status.update(label="HTTP Error", state="error")
+                st.error(f"❌ HTTP Error {e.response.status_code}: {e.response.text}")
             except Exception as e:
-                st.error(f"Error: {e}")
+                status.update(label="Unexpected Error", state="error")
+                st.error(
+                    f"❌ **Unexpected error**: `{type(e).__name__}`\n\n"
+                    f"```\n{str(e)}\n```\n\n"
+                    "Please report this issue if it persists."
+                )

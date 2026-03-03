@@ -2,11 +2,12 @@
 RAG Chain
 - Combines retriever and LLM into a question-answering pipeline
 - Formats retrieved context into a prompt
-- Returns answer with source citations
+- Returns answer with source citations and latency breakdown
 - Accepts external system_prompt / query_template for experiment injection
 """
 
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 
 from src.api.core.hybrid_retriever import HybridRetriever as Retriever
 from src.api.core.hybrid_retriever import RetrievedChunk
@@ -24,10 +25,18 @@ class Source:
 
 
 @dataclass
+class LatencyInfo:
+    retrieval_ms: float = 0.0
+    generation_ms: float = 0.0
+    total_ms: float = 0.0
+
+
+@dataclass
 class RAGResponse:
     answer: str
     sources: list[Source]
     query: str
+    latency: LatencyInfo = field(default_factory=LatencyInfo)
 
 
 class RAGChain:
@@ -68,8 +77,12 @@ class RAGChain:
 
     def query(self, question: str, top_k: int = 5) -> RAGResponse:
         """Run the full RAG pipeline: retrieve -> format -> generate."""
+        total_start = time.perf_counter()
+
         # 1. Retrieve relevant chunks
+        retrieval_start = time.perf_counter()
         chunks = self.retriever.search(question, top_k=top_k)
+        retrieval_ms = (time.perf_counter() - retrieval_start) * 1000
 
         # 2. Format context
         context = self._format_context(chunks)
@@ -78,13 +91,22 @@ class RAGChain:
         prompt = self.query_template.format(context=context, question=question)
 
         # 4. Generate answer
+        generation_start = time.perf_counter()
         answer = self.llm.generate(prompt=prompt, system=self.system_prompt)
+        generation_ms = (time.perf_counter() - generation_start) * 1000
 
         # 5. Collect sources
         sources = self._deduplicate_sources(chunks)
+
+        total_ms = (time.perf_counter() - total_start) * 1000
 
         return RAGResponse(
             answer=answer,
             sources=sources,
             query=question,
+            latency=LatencyInfo(
+                retrieval_ms=round(retrieval_ms, 1),
+                generation_ms=round(generation_ms, 1),
+                total_ms=round(total_ms, 1),
+            ),
         )

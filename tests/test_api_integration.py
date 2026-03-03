@@ -23,7 +23,7 @@ sys.modules["sentence_transformers"] = MagicMock()
 import httpx
 from fastapi.testclient import TestClient
 
-from src.api.core.rag_chain import RAGChain, RAGResponse, Source
+from src.api.core.rag_chain import RAGChain, LatencyInfo, RAGResponse, Source
 
 # ──────────────────────────────────────────────
 # Fixtures
@@ -52,6 +52,11 @@ def mock_rag_chain():
             ),
         ],
         query="What is RAG?",
+        latency=LatencyInfo(
+            retrieval_ms=1340.5,
+            generation_ms=18200.3,
+            total_ms=19540.8,
+        ),
     )
     return chain
 
@@ -175,6 +180,15 @@ class TestQueryEndpoint:
             assert "section" in source
             assert "authors" in source
             assert isinstance(source["distance"], float)
+        # Verify latency breakdown
+        assert "latency" in data
+        latency = data["latency"]
+        assert isinstance(latency["retrieval_ms"], float)
+        assert isinstance(latency["generation_ms"], float)
+        assert isinstance(latency["total_ms"], float)
+        assert latency["retrieval_ms"] > 0
+        assert latency["generation_ms"] > 0
+        assert latency["total_ms"] >= latency["retrieval_ms"]
 
 
 # ──────────────────────────────────────────────
