@@ -119,71 +119,71 @@ fine-tuning task performance."
 - No markdown formatting ✓
 - `<think>` tags present but empty (minimal reasoning needed) ✓
 
-## Evaluation: Base vs Fine-Tuned
+## Evaluation: 3-Way Comparison
 
-Ran the same 15-question benchmark on both models under identical conditions (same retrieval pipeline, same prompts, same hardware).
+Ran the same 15-question benchmark on all three configurations under identical conditions (same retrieval pipeline, same hardware).
 
 ### Aggregate Results
 
-| Metric | Base Model | Fine-Tuned | Change |
-|--------|-----------|------------|--------|
-| Keyword Coverage | 80.2% | 71.1% | -9.1%p ❌ |
-| Substantive Rate | 100% | 93.3% | -6.7%p ❌ |
-| Source Hit Rate | 100% | 100% | — |
-| MRR | 0.82 | 0.82 | — |
-| Avg Latency | 20.3s | 22.0s | +1.7s |
+| Metric | Zero-Shot | Few-Shot | Fine-Tuned |
+|--------|-----------|----------|------------|
+| Keyword Coverage | 76.4% | **78.0%** | 48.0% |
+| Source Hit Rate | 100% | 100% | 100% |
+| Substantive Rate | 100% | 100% | 100% |
+| Avg Word Count | 175 | 177 | 1,614 |
+| Avg Latency | 20.0s | 20.8s | 47.7s |
 
 ### Per-Question Keyword Coverage
 
-| Topic | Base | Fine-Tuned | Δ |
-|-------|------|------------|---|
-| qlora | 83% | 100% | +17%p ✅ |
-| rag | 100% | 100% | — |
-| rag_eval | 100% | 100% | — |
-| peft | 100% | 100% | — |
-| prompt_engineering | 100% | 100% | — |
-| vector_db | 100% | 83% | -17%p |
-| rag_security | 100% | 83% | -17%p |
-| instruction_tuning | 80% | 80% | — |
-| multihop_rag | 80% | 60% | -20%p |
-| small_llm | 80% | 80% | — |
-| double_quant | 60% | 60% | — |
-| hallucination | 40% | 40% | — |
-| lora | 40% | 20% | -20%p |
-| lora_plus | 40% | 40% | — |
-| **ragas** | **100%** | **20%** | **-80%p ❌** |
+| Topic | Zero-Shot | Few-Shot | Fine-Tuned |
+|-------|-----------|----------|------------|
+| qlora | 83% | 83% | 83% |
+| rag | 100% | 100% | 80% |
+| rag_eval | 100% | 100% | 60% |
+| peft | 100% | 100% | 80% |
+| prompt_engineering | 100% | 100% | 60% |
+| vector_db | 83% | 100% | 50% |
+| rag_security | 83% | 83% | 50% |
+| instruction_tuning | 60% | 60% | 40% |
+| multihop_rag | 40% | 80% | 20% |
+| small_llm | 60% | 60% | 40% |
+| double_quant | 60% | 60% | 0% |
+| hallucination | 60% | 60% | 20% |
+| lora | 60% | 40% | 40% |
+| lora_plus | 60% | 60% | 20% |
+| ragas (topic) | 100% | 80% | 0% |
 
-The ragas question is the single biggest contributor to the regression — the fine-tuned model returned only 3 words ("Ragas evaluates R") before truncating, consuming 33.6 seconds (longest latency in the set).
+> Note: the "ragas" row refers to a benchmark question about the Ragas evaluation framework — it is **not** a Ragas metric score. The fine-tuned model scored 0% keyword coverage on this question because every response began by repeating system prompt instructions verbatim, displacing actual answer content. Word counts averaged ~1,600 tokens — nearly 10× the base model — with instruction parroting consuming the majority of the output.
 
 ## Root Cause Analysis
 
-### 1. Catastrophic Forgetting in Small Models
+### 1. Training Data Contamination (Primary Cause)
 
-At 4B parameters, the model's capacity is limited. LoRA fine-tuning on 2,000 examples successfully shifted response style (more concise, less markdown), but this came at the cost of comprehensive topic coverage. Larger models (7B+) have more capacity to absorb new behaviours without degrading existing capabilities.
+The synthetic data generation pipeline used Qwen3's `format: json` with thinking mode enabled. The model's `thinking` field contained system prompt fragments mixed with reasoning. When these were extracted as training answers, the model learned to reproduce instruction text as part of its response — a form of **training data contamination** where the model memorised prompt scaffolding rather than learning the intended answering behaviour.
 
-### 2. Evaluation Metric Mismatch
+Inspection of fine-tuned responses confirmed this: **every response begins by repeating the system prompt instructions verbatim** ("Answer in concise prose paragraphs without markdown headers or bullet points..."), inflating word counts to ~1,600 and displacing actual answer content. This instruction parroting is the dominant failure mode, causing keyword coverage to collapse to 0% on 6 of 15 questions.
 
-Keyword Coverage measures whether specific terms appear in the answer. The fine-tuned model was trained to produce concise, prose-style answers — exactly the behaviour that reduces keyword recall. For example, a base model answer that uses both "parameter-efficient fine-tuning" and "PEFT" scores higher than a fine-tuned answer that uses only "PEFT", even though both are correct.
+### 2. Evaluation Metric Limitation
 
-A semantic similarity metric (e.g., BERTScore, GPT-as-judge) would better capture whether the answer conveys the same meaning in fewer words.
+Keyword Coverage measures whether specific terms appear in the answer. The fine-tuned model's verbose, instruction-padded responses fail exact string matching even when the semantic content may be partially correct. Without semantic evaluation metrics like **BERTScore** or LLM-as-a-judge frameworks (e.g., Ragas), it is impossible to conclusively separate "poor answering capability" from "different vocabulary/verbosity".
 
-### 3. Quantisation Gap
+### 3. Catastrophic Forgetting in Small Models
 
-The base model runs as Ollama's default `qwen3:4b` (Q4_K_M quantisation), while the fine-tuned model was converted to Q8_0 GGUF. Different quantisation methods affect token probability distributions and thus generation behaviour, independent of the fine-tuning itself. A fair comparison would require both models at the same quantisation level.
+At 4B parameters, the model's capacity is limited. LoRA fine-tuning on 2,000 examples shifted response style but degraded topic coverage. Larger models (7B+) have more capacity to absorb new behaviours without losing existing capabilities.
 
-### 4. Thinking Mode Interaction
+### 4. Quantisation Gap
 
-Qwen3's `<think>` reasoning mode behaves differently after fine-tuning. The `/no_think` prompt injection was calibrated for base model weights and is less effective after LoRA modification. The ragas question failure (3-word output after 33.6s) strongly suggests the model spent its token budget on internal reasoning.
+The base model runs as Ollama's default `qwen3:4b` (Q4_K_M quantisation), while the fine-tuned model was converted to Q8_0 GGUF. Different quantisation methods affect token probability distributions, making comparison imprecise.
 
 ## What I Would Do Differently
 
-1. **Use a larger base model (7B+)** — more capacity reduces catastrophic forgetting risk
-2. **Add semantic evaluation metrics** — BERTScore or GPT-as-judge alongside keyword matching
-3. **Include `/no_think` in training data** — train the model with thinking mode explicitly disabled
-4. **Use 1 epoch with lower LR (5e-5)** — minimise forgetting while still imparting style changes
-5. **Quantise both models identically** — Q8_0 for both base and fine-tuned for fair comparison
-6. **A/B test with human evaluation** — capture qualitative improvements that automated metrics miss
-7. **Increase training data to 10K+** — more diverse examples reduce overfitting to specific patterns
+1. **Validate training data for instruction leakage** — add automated checks that reject any training answer containing system prompt fragments
+2. **Use a separate model for data generation** — avoid the thinking mode contamination issue by generating data with a different (typically larger) model
+3. **Implement semantic evaluation metrics** — BERTScore and Ragas are critical; without them, we cannot distinguish "poor answering" from "different vocabulary"
+4. **Start with few-shot baseline before fine-tuning** — establish prompt engineering ceiling first, then fine-tune only if there is a clear gap
+5. **Use a larger base model (7B+)** — more capacity reduces catastrophic forgetting risk
+6. **Use 1 epoch with lower LR (5e-5)** — minimise forgetting while still imparting style changes
+7. **Quantise both models identically** — Q8_0 for both base and fine-tuned for fair comparison
 
 ## Files
 

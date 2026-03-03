@@ -607,6 +607,20 @@ curl http://localhost:8000/health  # Verify: {"status":"healthy","ollama":true,"
 - Generated UI mockup screenshots (since services were down) and embedded a GIF + static screenshots at the top of the README.
 - Updated 36 unit/integration tests to accommodate the new `latency` field in the API schema. All 104 tests pass.
 
+#### Makefile
+- Populated the previously empty `Makefile` with 14 dev shortcuts: `make up/down/build/logs` (Docker), `make dev/api/ui` (local), `make seed` (data pipeline), `make test/lint/fmt` (quality), `make health/clean/help` (utilities).
+
+#### Docker Healthchecks
+- Added `healthcheck` to all 3 services in `docker-compose.yml`:
+  - `chromadb`: polls `/api/v1/heartbeat` every 10s
+  - `api`: polls `/` every 10s, 15s start period for model loading
+- Changed `depends_on` from simple service name to `condition: service_healthy` — containers now wait for dependencies to be genuinely ready, not just started.
+
+#### Fine-Tuning Documentation Update
+- Updated `docs/finetuning_experiment.md` to reflect the final 3-way evaluation data (zero-shot vs few-shot vs fine-tuned) instead of the outdated Day 5 base-vs-fine-tuned comparison.
+- Added training data contamination as the primary root cause (instruction parroting from `<think>` field leakage), superseding the earlier catastrophic forgetting hypothesis.
+- Clarified that the "ragas" row in the per-question table refers to a benchmark question topic, not a Ragas framework metric.
+
 #### End of Day Status
 - Week 3 roadmap (UI & Demo) fully complete.
 - RAG system is now production-ready with robust error handling, fully documented APIs, and clear bottleneck visibility via latency profiling.

@@ -7,6 +7,12 @@ services:
       - chroma_data:/chroma/chroma
     environment:
       - ANONYMIZED_TELEMETRY=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   api:
     build:
@@ -19,10 +25,17 @@ services:
       - CHROMA_HOST=chromadb
       - CHROMA_PORT=8000
     depends_on:
-      - chromadb
+      chromadb:
+        condition: service_healthy
     restart: on-failure
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   ui:
     build:
@@ -33,7 +46,8 @@ services:
     environment:
       - API_URL=http://api:8000
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: on-failure
 
 volumes:
