@@ -292,7 +292,7 @@ Additional contributing factors include catastrophic forgetting in the 4B model,
 
 For full experiment data and debugging notes:
 
-- [Development Log](docs/weekly_log.md)
+- [Development Log](docs/Development_log.md)
 - [Embedding Model Debugging](docs/embedding_model_debugging.md)
 - [Retrieval Optimisation Experiments](docs/retrieval_optimisation.md)
 - [Fine-Tuning Experiment Log](docs/finetuning_experiment.md)
