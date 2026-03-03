@@ -9,7 +9,6 @@ Usage:
     python -m scripts.run_fewshot_experiment
 """
 
-from src.api.core.prompts import SYSTEM_PROMPT_FEW_SHOT
 from src.evaluation.evaluate import run_evaluation
 
 
@@ -39,7 +38,7 @@ def main():
     #   1. Change LLM_MODEL in .env to "qwen3-4b-rag"
     #   2. Uncomment the block below
     #   3. Run this script again
-    
+
     run_evaluation(
         top_k=5,
         label="finetuned_lora",

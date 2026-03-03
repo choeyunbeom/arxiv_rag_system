@@ -23,7 +23,7 @@ sys.modules["sentence_transformers"] = MagicMock()
 import httpx
 from fastapi.testclient import TestClient
 
-from src.api.core.rag_chain import RAGChain, LatencyInfo, RAGResponse, Source
+from src.api.core.rag_chain import LatencyInfo, RAGChain, RAGResponse, Source
 
 # ──────────────────────────────────────────────
 # Fixtures

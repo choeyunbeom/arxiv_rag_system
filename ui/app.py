@@ -4,11 +4,12 @@ Interactive Q&A interface over academic papers with error handling,
 loading indicators, query history, and latency breakdown display.
 """
 
-import streamlit as st
-import httpx
+import os
 import time
 
-import os
+import httpx
+import streamlit as st
+
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 MAX_QUESTION_LENGTH = 500
