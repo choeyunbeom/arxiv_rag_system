@@ -4,6 +4,8 @@ A Retrieval-Augmented Generation system for querying academic papers from arXiv.
 
 Ask a question in natural language → the system retrieves relevant papers → generates a cited, grounded answer.
 
+📝 **Blog Post:** [Building an End-to-End arXiv RAG System](https://choeyunbeom.github.io/machine%20learning/nlp/arxiv-rag-system/)
+
 ## Demo
 
 ![Query → answer flow with source citations and latency breakdown](docs/demo/ui_demo.gif)
@@ -299,8 +301,9 @@ Additional contributing factors include catastrophic forgetting in the 4B model 
 
 ## Detailed Logs
 
-For full experiment data and debugging notes:
+For full experiment data, debugging notes, and the project retrospective:
 
+- 📝 **[Project Write-up (Blog)](https://choeyunbeom.github.io/machine%20learning/nlp/arxiv-rag-system/)**
 - [Development Log](docs/Development_log.md)
 - [Embedding Model Debugging](docs/embedding_model_debugging.md)
 - [Retrieval Optimisation Experiments](docs/retrieval_optimisation.md)
