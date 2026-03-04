@@ -163,18 +163,26 @@ arxiv_rag_system/
 - Docker Desktop
 - Ollama (for LLM + embeddings)
 
-### Quick Start (Docker Compose)
+### Quick Start
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/choeyunbeom/arxiv_rag_system.git
 cd arxiv_rag_system
 
-# Pull Ollama models (must run on host for Metal GPU)
+# 2. Pull Ollama models (must run on host for Metal GPU)
 ollama pull qwen3:4b
 ollama pull mxbai-embed-large
 
-# Start all services
+# 3. Setup Python environment and install dependencies
+uv venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
+
+# 4. Start ChromaDB and index the data
+docker compose up chromadb -d
+make seed
+
+# 5. Start all services
 docker compose up --build
 ```
 
