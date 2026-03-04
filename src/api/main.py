@@ -32,10 +32,14 @@ tags_metadata = [
 async def lifespan(app: FastAPI):
     """Pre-load heavy resources at server startup, not on first request."""
     print("Loading RAG pipeline...")
-    app.state.rag_chain = RAGChain()
-    print("RAG pipeline ready.")
+    try:
+        app.state.rag_chain = RAGChain()
+        print("RAG pipeline ready.")
+    except Exception as e:
+        print(f"WARNING: RAG pipeline not available — {e}")
+        print("API will start in degraded mode. Run 'make seed' to index data.")
+        app.state.rag_chain = None
     yield
-    # Cleanup (if needed)
     print("Shutting down.")
 
 
