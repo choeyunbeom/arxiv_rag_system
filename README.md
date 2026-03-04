@@ -80,12 +80,13 @@ Compared three answer generation strategies on the same 15-question benchmark un
 | Metric | Zero-Shot | Few-Shot | Fine-Tuned |
 |--------|-----------|----------|------------|
 | Keyword Coverage | 76.4% | **78.0%** | 48.0% |
+| BERTScore F1 | 0.786 | **0.805** | 0.683 |
 | Source Hit Rate | 100% | 100% | 100% |
 | Substantive Rate | 100% | 100% | 100% |
 | Avg Word Count | 175 | 177 | 1,614 |
 | Avg Latency | 20.0s | 20.8s | 47.7s |
 
-Few-shot prompt engineering outperformed both zero-shot and fine-tuning. The fine-tuned model suffered from training data contamination — see [Fine-Tuning Analysis](#why-fine-tuning-didnt-improve-metrics) for the full breakdown.
+Few-shot prompt engineering outperformed both zero-shot and fine-tuning on both keyword and semantic metrics. BERTScore confirms the fine-tuning regression is not merely a keyword matching artifact — see [Fine-Tuning Analysis](#why-fine-tuning-didnt-improve-metrics) for the full breakdown.
 
 ## Tech Stack
 
@@ -267,14 +268,13 @@ The fine-tuned model scored drastically lower on keyword coverage (-28.4%p) with
 
 The synthetic data generation pipeline (Day 4) used Qwen3's `format: json` with thinking mode enabled. The model's `thinking` field contained system prompt fragments mixed with reasoning. When these were extracted as training answers, the model learned to reproduce instruction text as part of its response — a form of **training data contamination** where the model memorised prompt scaffolding rather than learning the intended answering behaviour.
 
-Additional contributing factors include catastrophic forgetting in the 4B model, evaluation metric mismatch (keyword matching penalises concise answers), and quantisation differences between base (Q4_K_M) and fine-tuned (Q8_0) models.
+Additional contributing factors include catastrophic forgetting in the 4B model and quantisation differences between base (Q4_K_M) and fine-tuned (Q8_0) models. BERTScore evaluation (F1: 0.805 few-shot vs 0.683 fine-tuned) confirms the degradation is real and measurable at the semantic level, not just a keyword matching artifact.
 
 ### What I Would Do Differently
 
 - **Validate training data for instruction leakage**: Add automated checks that reject any training answer containing system prompt fragments
-- **Use a separate model for data generation**: Avoid the thinking mode contamination issue by generating data with a different model
+- **Use a separate model for data generation**: Avoid the thinking mode contamination issue by generating data with a different (typically larger) model
 - **Start with few-shot baseline before fine-tuning**: Establish prompt engineering ceiling first, then fine-tune only if there is a clear gap
-- **Add semantic evaluation metrics** (BERTScore, GPT-as-judge) alongside keyword matching
 - **Use a larger base model (7B+)** to reduce catastrophic forgetting risk
 
 ## Development Timeline

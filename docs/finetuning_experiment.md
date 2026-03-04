@@ -128,10 +128,13 @@ Ran the same 15-question benchmark on all three configurations under identical c
 | Metric | Zero-Shot | Few-Shot | Fine-Tuned |
 |--------|-----------|----------|------------|
 | Keyword Coverage | 76.4% | **78.0%** | 48.0% |
+| BERTScore F1 | 0.786 | **0.805** | 0.683 |
 | Source Hit Rate | 100% | 100% | 100% |
 | Substantive Rate | 100% | 100% | 100% |
 | Avg Word Count | 175 | 177 | 1,614 |
 | Avg Latency | 20.0s | 20.8s | 47.7s |
+
+BERTScore (distilbert-base-uncased) measures semantic similarity between generated answers and reference answers, complementing keyword coverage with meaning-level evaluation.
 
 ### Per-Question Keyword Coverage
 
@@ -163,9 +166,9 @@ The synthetic data generation pipeline used Qwen3's `format: json` with thinking
 
 Inspection of fine-tuned responses confirmed this: **every response begins by repeating the system prompt instructions verbatim** ("Answer in concise prose paragraphs without markdown headers or bullet points..."), inflating word counts to ~1,600 and displacing actual answer content. This instruction parroting is the dominant failure mode, causing keyword coverage to collapse to 0% on 6 of 15 questions.
 
-### 2. Evaluation Metric Limitation
+### 2. Evaluation Metric Corroboration
 
-Keyword Coverage measures whether specific terms appear in the answer. The fine-tuned model's verbose, instruction-padded responses fail exact string matching even when the semantic content may be partially correct. Without semantic evaluation metrics like **BERTScore** or LLM-as-a-judge frameworks (e.g., Ragas), it is impossible to conclusively separate "poor answering capability" from "different vocabulary/verbosity".
+BERTScore confirms the regression is not merely a keyword matching artifact. The fine-tuned model scores 0.683 F1 vs 0.805 for few-shot — a **-0.122 drop in semantic similarity**. This is smaller than the keyword coverage gap (-30%p), suggesting the fine-tuned model does retain some semantic understanding beneath the instruction parroting, but the degradation is real and measurable across both lexical and semantic metrics.
 
 ### 3. Catastrophic Forgetting in Small Models
 
