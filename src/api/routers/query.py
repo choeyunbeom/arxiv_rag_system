@@ -67,6 +67,12 @@ def query(request: QueryRequest, req: Request):
     """
     rag_chain = req.app.state.rag_chain
 
+    if rag_chain is None:
+        raise HTTPException(
+            status_code=503,
+            detail="RAG pipeline is not initialized. Please ensure data is indexed and ChromaDB is running.",
+        )
+
     try:
         result = rag_chain.query(
             question=request.question,
