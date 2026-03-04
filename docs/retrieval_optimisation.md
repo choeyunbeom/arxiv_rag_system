@@ -118,35 +118,6 @@ Adopted **Hybrid + Reranker + Dedup** pipeline. The latency increase of 7% is ne
 
 ---
 
-## 6. Final Architecture & Results
-
-### Adopted Pipeline
-```
-Query → [BM25 Index + ChromaDB Vector Search] (Top-40 each)
-      → RRF Fusion (Top-40)
-      → Cross-Encoder Reranker (ms-marco-MiniLM-L-6-v2)
-      → Deduplication by arxiv_id
-      → Top-5 Results
-```
-
-### Final Hyperparameters
-- Chunk Size: 200 words
-- Chunk Overlap: 100 words
-- Embedding Model: `mxbai-embed-large`
-- Reranker: `cross-encoder/ms-marco-MiniLM-L-6-v2`
-- RRF k: 60
-- Fetch k: top_k × 8 (40 candidates for top-5)
-
-### Optimization Journey
-
-| Stage | Hit Rate | MRR | Key Change |
-|-------|----------|-----|------------|
-| Baseline | 60% | 0.51 | 128w chunks, dense only |
-| + Chunk optimisation | 67% | 0.42 | 200w chunks, fault-tolerant indexer |
-| + BM25 Hybrid Search | 73% | 0.52 | RRF fusion with keyword search |
-| **+ Reranker + Dedup** | **100%** | **0.78** | Cross-encoder reranking, paper-level dedup |
-
----
 
 ## 4. Experiment 4: Token-Based Chunking
 
