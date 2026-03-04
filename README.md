@@ -287,6 +287,7 @@ Additional contributing factors include catastrophic forgetting in the 4B model 
 | 4 | Fine-Tuning Prep | 1,997 synthetic Q&A pairs generated. Code quality refactoring (9 fixes). |
 | 5 | Fine-Tuning & Eval | LoRA training, GGUF conversion, Ollama deployment. Honest evaluation showing regression — analysed root causes. |
 | 6 | Testing & CI/CD | 104 tests (unit + integration). GitHub Actions CI. Docker Compose full-stack deployment. Few-shot experiment revealing training data contamination as fine-tuning root cause. |
+| 7 | UI & Demo | Streamlit UI improvements (error handling, latency visualisation). API documentation. Makefile + Docker healthchecks. BERTScore semantic evaluation. |
 
 ## Detailed Logs
 
