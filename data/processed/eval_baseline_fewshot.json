@@ -21,7 +21,10 @@
       "avg_word_count": 176.53333333333333,
       "avg_latency": 20.76378370920817,
       "total_time": 311.46,
-      "total_questions": 15
+      "total_questions": 15,
+      "bertscore_precision": 0.7622,
+      "bertscore_recall": 0.8523,
+      "bertscore_f1": 0.8047
     },
     "details": [
       {
@@ -45,7 +48,8 @@
           "2505.03406v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 21.33
+        "latency_seconds": 21.33,
+        "bertscore_f1": 0.8549
       },
       {
         "question": "How does LoRA work for fine-tuning large language models?",
@@ -69,7 +73,8 @@
           "2602.05988v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 21.14
+        "latency_seconds": 21.14,
+        "bertscore_f1": 0.797
       },
       {
         "question": "What is Retrieval Augmented Generation?",
@@ -94,7 +99,8 @@
           "2502.00306v2"
         ],
         "is_substantive": true,
-        "latency_seconds": 17.72
+        "latency_seconds": 17.72,
+        "bertscore_f1": 0.8093
       },
       {
         "question": "How can RAG systems be evaluated?",
@@ -118,7 +124,8 @@
           "2601.05264v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 18.02
+        "latency_seconds": 18.02,
+        "bertscore_f1": 0.7984
       },
       {
         "question": "What techniques exist to mitigate hallucinations in LLMs?",
@@ -144,7 +151,8 @@
           "2502.11306v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 20.21
+        "latency_seconds": 20.21,
+        "bertscore_f1": 0.7633
       },
       {
         "question": "What is instruction tuning and why is it important?",
@@ -169,7 +177,8 @@
           "2304.12244v3"
         ],
         "is_substantive": true,
-        "latency_seconds": 26.65
+        "latency_seconds": 26.65,
+        "bertscore_f1": 0.792
       },
       {
         "question": "How does LoRA+ improve upon standard LoRA?",
@@ -191,7 +200,8 @@
           "2402.12354v2"
         ],
         "is_substantive": true,
-        "latency_seconds": 18.86
+        "latency_seconds": 18.86,
+        "bertscore_f1": 0.8092
       },
       {
         "question": "What is the difference between full fine-tuning and parameter-efficient fine-tuning?",
@@ -216,7 +226,8 @@
           "2412.09827v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 23.88
+        "latency_seconds": 23.88,
+        "bertscore_f1": 0.7978
       },
       {
         "question": "How do multi-hop questions challenge RAG systems?",
@@ -239,7 +250,8 @@
           "2502.13957v2"
         ],
         "is_substantive": true,
-        "latency_seconds": 20.4
+        "latency_seconds": 20.4,
+        "bertscore_f1": 0.7809
       },
       {
         "question": "What is the role of vector databases in RAG pipelines?",
@@ -263,7 +275,8 @@
           "2502.00306v2"
         ],
         "is_substantive": true,
-        "latency_seconds": 18.52
+        "latency_seconds": 18.52,
+        "bertscore_f1": 0.8002
       },
       {
         "question": "How can prompt engineering improve LLM outputs?",
@@ -288,7 +301,8 @@
           "2401.14043v3"
         ],
         "is_substantive": true,
-        "latency_seconds": 19.06
+        "latency_seconds": 19.06,
+        "bertscore_f1": 0.7997
       },
       {
         "question": "What is Double Quantization in QLoRA?",
@@ -311,7 +325,8 @@
           "2404.00862v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 20.89
+        "latency_seconds": 20.89,
+        "bertscore_f1": 0.8289
       },
       {
         "question": "How does the Ragas framework evaluate RAG pipelines?",
@@ -334,7 +349,8 @@
           "2601.05264v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 26.92
+        "latency_seconds": 26.92,
+        "bertscore_f1": 0.8587
       },
       {
         "question": "What are corpus poisoning attacks on RAG systems?",
@@ -356,7 +372,8 @@
           "2512.24268v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 19.31
+        "latency_seconds": 19.31,
+        "bertscore_f1": 0.7763
       },
       {
         "question": "How can small language models be made more efficient through fine-tuning?",
@@ -380,7 +397,8 @@
           "2305.14314v1"
         ],
         "is_substantive": true,
-        "latency_seconds": 18.54
+        "latency_seconds": 18.54,
+        "bertscore_f1": 0.8038
       }
     ]
   }
