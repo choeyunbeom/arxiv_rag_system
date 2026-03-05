@@ -243,11 +243,6 @@ def render_umap_visualization(vis_data: dict):
         ),
         plot_bgcolor="white"
     )
-<<<<<<< HEAD
-
-=======
-    
->>>>>>> origin/main
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
@@ -419,14 +414,11 @@ if should_query:
                     if "latency" in data and data["latency"]:
                         with st.expander("⏱️ Latency Breakdown", expanded=False):
                             render_latency_breakdown(data["latency"])
-                            
-                    # Visualization
-                    if include_vis and data.get("vis_data"):
-                        render_umap_visualization(data["vis_data"])
 
                     # Visualization
                     if include_vis and data.get("vis_data"):
                         render_umap_visualization(data["vis_data"])
+
 
                     # Sources
                     render_sources(data.get("sources", []))

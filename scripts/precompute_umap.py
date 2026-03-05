@@ -5,9 +5,7 @@ and `data/processed/umap_model.pkl` containing the fitted UMAP reducer for trans
 new query embeddings in real time.
 """
 import json
-import os
 import pickle
-from pathlib import Path
 
 import chromadb
 import numpy as np
