@@ -22,6 +22,10 @@ class QueryRequest(BaseModel):
         le=20,
         description="Number of source chunks to retrieve and cite in the answer",
     )
+    include_vis: bool = Field(
+        default=False,
+        description="Whether to return UMAP 2D coordinates for interactive embedding visualization",
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -29,6 +33,7 @@ class QueryRequest(BaseModel):
                 {
                     "question": "What is QLoRA and how does it reduce memory usage?",
                     "top_k": 5,
+                    "include_vis": True,
                 }
             ]
         }
@@ -55,6 +60,25 @@ class LatencyBreakdown(BaseModel):
     total_ms: float = Field(description="Total end-to-end latency")
 
 
+class VisPoint(BaseModel):
+    """A single embedding point transformed into 2D via UMAP."""
+    
+    chunk_id: str | None = Field(default=None, description="The ID of the chunk, None for query")
+    x: float = Field(description="3D X coordinate")
+    y: float = Field(description="3D Y coordinate")
+    z: float = Field(description="3D Z coordinate")
+    title: str | None = Field(default=None, description="Title of the paper")
+    section: str | None = Field(default=None, description="Section of the paper")
+    text_preview: str | None = Field(default=None, description="Short snippet of the text")
+    is_source: bool = Field(default=False, description="True if this chunk was one of the returned sources")
+    is_query: bool = Field(default=False, description="True if this point is the user's query")
+
+
+class VisData(BaseModel):
+    """Visualization data to be rendered by Plotly."""
+    points: list[VisPoint] = Field(description="List of all points to plot (background + query + sources)")
+
+
 class QueryResponse(BaseModel):
     """RAG pipeline response containing the generated answer, source citations, and latency breakdown."""
 
@@ -62,6 +86,7 @@ class QueryResponse(BaseModel):
     sources: list[SourceInfo] = Field(description="Retrieved source chunks cited in the answer")
     query: str = Field(description="Echo of the original question")
     latency: LatencyBreakdown = Field(description="Pipeline latency breakdown in milliseconds")
+    vis_data: VisData | None = Field(default=None, description="Optional visualization data")
 
     model_config = {
         "json_schema_extra": {

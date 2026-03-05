@@ -33,6 +33,7 @@ from src.api.core.rag_chain import RAGChain, RAGResponse
 def _make_chunk(arxiv_id="2401.00001", title="Paper A", section="Introduction",
                 text="Sample text", distance=0.15, authors="Author A", published="2024-01"):
     return RetrievedChunk(
+        chunk_id="test_chunk",
         text=text,
         arxiv_id=arxiv_id,
         title=title,
@@ -177,7 +178,7 @@ class TestDeduplicateSources:
 
 class TestQuery:
     def test_returns_rag_response(self, mock_rag_chain, sample_chunks):
-        mock_rag_chain._mock_retriever.search.return_value = sample_chunks
+        mock_rag_chain._mock_retriever.search.return_value = (sample_chunks, None)
         mock_rag_chain._mock_llm.generate.return_value = "RAG is a technique."
 
         response = mock_rag_chain.query("What is RAG?")
@@ -191,7 +192,7 @@ class TestQuery:
         assert response.latency.total_ms >= 0
 
     def test_passes_system_prompt_to_llm(self, mock_rag_chain, sample_chunks):
-        mock_rag_chain._mock_retriever.search.return_value = sample_chunks
+        mock_rag_chain._mock_retriever.search.return_value = (sample_chunks, None)
         mock_rag_chain._mock_llm.generate.return_value = "Answer"
 
         mock_rag_chain.query("test question")
@@ -207,7 +208,7 @@ class TestQuery:
             MockRet.return_value = mock_ret
             MockLLM.return_value = mock_llm
 
-            mock_ret.search.return_value = sample_chunks
+            mock_ret.search.return_value = (sample_chunks, None)
             mock_llm.generate.return_value = "Answer"
 
             chain = RAGChain(system_prompt="Custom system prompt")
@@ -217,14 +218,14 @@ class TestQuery:
             assert call_kwargs.kwargs["system"] == "Custom system prompt"
 
     def test_top_k_forwarded(self, mock_rag_chain):
-        mock_rag_chain._mock_retriever.search.return_value = []
+        mock_rag_chain._mock_retriever.search.return_value = ([], None)
         mock_rag_chain._mock_llm.generate.return_value = ""
 
         mock_rag_chain.query("test", top_k=10)
-        mock_rag_chain._mock_retriever.search.assert_called_with("test", top_k=10)
+        mock_rag_chain._mock_retriever.search.assert_called_with("test", top_k=10, get_embeddings=False)
 
     def test_context_included_in_prompt(self, mock_rag_chain, sample_chunks):
-        mock_rag_chain._mock_retriever.search.return_value = sample_chunks
+        mock_rag_chain._mock_retriever.search.return_value = (sample_chunks, None)
         mock_rag_chain._mock_llm.generate.return_value = "Answer"
 
         mock_rag_chain.query("What is RAG?")

@@ -77,6 +77,7 @@ def query(request: QueryRequest, req: Request):
         result = rag_chain.query(
             question=request.question,
             top_k=request.top_k,
+            include_vis=request.include_vis,
         )
 
         sources = [
@@ -99,6 +100,7 @@ def query(request: QueryRequest, req: Request):
                 generation_ms=result.latency.generation_ms,
                 total_ms=result.latency.total_ms,
             ),
+            vis_data=result.vis_data
         )
     except httpx.ConnectError:
         raise HTTPException(status_code=503, detail="Ollama service unavailable")

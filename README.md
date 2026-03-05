@@ -223,6 +223,9 @@ python -m src.ingestion.pdf_parser
 
 # 3. Index chunks into ChromaDB
 python -m src.ingestion.indexer
+
+# 4. Precompute UMAP 3D Visualization Data (Required for UI Graph)
+python -m scripts.precompute_umap
 ```
 
 ## Engineering Decisions
