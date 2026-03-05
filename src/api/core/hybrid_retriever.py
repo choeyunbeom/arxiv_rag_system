@@ -8,23 +8,28 @@ Hybrid Retriever with Reranker (v3)
 
 import json
 import math
+import pickle
 import re
 from dataclasses import dataclass
 
 import chromadb
 import httpx
+import numpy as np
 from rank_bm25 import BM25Okapi
 from sentence_transformers import CrossEncoder
 
 from src.api.core.config import DATA_DIR, settings
 
 CHUNKS_FILE = DATA_DIR / "processed" / "chunks.json"
+UMAP_MODEL_PATH = DATA_DIR / "processed" / "umap_model.pkl"
+UMAP_BG_JSON_PATH = DATA_DIR / "processed" / "umap_bg.json"
 
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
 @dataclass
 class RetrievedChunk:
+    chunk_id: str
     text: str
     arxiv_id: str
     title: str
@@ -50,6 +55,23 @@ class HybridRetriever:
         print("  Loading reranker model...")
         self.reranker = CrossEncoder(RERANKER_MODEL)
         print(f"  Reranker loaded: {RERANKER_MODEL}")
+
+        # UMAP Models
+        self.umap_reducer = None
+        self.umap_bg_data = None
+        self._load_umap()
+
+    def _load_umap(self):
+        """Load precomputed UMAP model and background points if available."""
+        if UMAP_MODEL_PATH.exists() and UMAP_BG_JSON_PATH.exists():
+            print("  Loading UMAP model and background data...")
+            with open(UMAP_MODEL_PATH, "rb") as f:
+                self.umap_reducer = pickle.load(f)
+            with open(UMAP_BG_JSON_PATH, "r", encoding="utf-8") as f:
+                self.umap_bg_data = json.load(f)
+            print(f"  UMAP loaded with {len(self.umap_bg_data)} background points.")
+        else:
+            print("  UMAP files not found. Visualization will be disabled.")
 
     def _tokenize(self, text: str) -> list[str]:
         """Simple tokenizer for BM25."""
@@ -77,9 +99,8 @@ class HybridRetriever:
         response.raise_for_status()
         return response.json()["embeddings"][0]
 
-    def _vector_search(self, query: str, top_k: int) -> dict[str, float]:
+    def _vector_search(self, query_embedding: list[float], top_k: int) -> dict[str, float]:
         """Vector search via ChromaDB. Returns {chunk_id: rank}."""
-        query_embedding = self._embed_query(query)
         results = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
@@ -158,12 +179,13 @@ class HybridRetriever:
                 break
         return deduped
 
-    def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
+    def search(self, query: str, top_k: int = 5, get_embeddings: bool = False) -> tuple[list[RetrievedChunk], list[float] | None]:
         """Hybrid search with reranking and deduplication."""
         # Stage 1: Fetch broad candidates
         fetch_k = top_k * 8  # Get 40 candidates for better coverage
+        query_embedding = self._embed_query(query)
 
-        vector_ranks = self._vector_search(query, fetch_k)
+        vector_ranks = self._vector_search(query_embedding, fetch_k)
         bm25_ranks = self._bm25_search(query, fetch_k)
 
         # Stage 2: RRF fusion
@@ -181,6 +203,7 @@ class HybridRetriever:
             idx = self.chunk_id_to_idx[cid]
             c = self.chunks_data[idx]
             chunk = RetrievedChunk(
+                chunk_id=cid,
                 text=c["text"],
                 arxiv_id=c["arxiv_id"],
                 title=c["title"],
@@ -191,4 +214,5 @@ class HybridRetriever:
             )
             chunks.append(chunk)
 
-        return chunks
+        query_emb_out = query_embedding if get_embeddings else None
+        return chunks, query_emb_out

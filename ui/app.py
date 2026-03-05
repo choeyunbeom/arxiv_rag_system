@@ -8,6 +8,7 @@ import os
 import time
 
 import httpx
+import plotly.graph_objects as go
 import streamlit as st
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
@@ -163,10 +164,98 @@ def render_sources(sources: list):
         """, unsafe_allow_html=True)
 
 
+def render_umap_visualization(vis_data: dict):
+    """Render a 2D UMAP scatter plot using Plotly."""
+    st.markdown("### 🌌 Embedding Space (UMAP)")
+    if not vis_data or "points" not in vis_data:
+        st.warning("No visualization data available.")
+        return
+        
+    points = vis_data["points"]
+    if not points:
+        return
+        
+    fig = go.Figure()
+    
+    # Separate points
+    bg_x, bg_y, bg_z, bg_text = [], [], [], []
+    src_x, src_y, src_z, src_text = [], [], [], []
+    query_x, query_y, query_z, query_text = [], [], [], []
+    
+    import textwrap
+    
+    for p in points:
+        hover_text = f"<b>{p.get('title', 'Unknown')}</b><br>" \
+                     f"Section: {p.get('section', 'N/A')}<br><br>" \
+                     f"{textwrap.shorten(p.get('text_preview', ''), width=80)}"
+                     
+        if p.get("is_query"):
+            query_x.append(p["x"])
+            query_y.append(p["y"])
+            query_z.append(p.get("z", 0.0))
+            query_text.append(hover_text)
+        elif p.get("is_source"):
+            src_x.append(p["x"])
+            src_y.append(p["y"])
+            src_z.append(p.get("z", 0.0))
+            src_text.append(hover_text)
+        else:
+            bg_x.append(p["x"])
+            bg_y.append(p["y"])
+            bg_z.append(p.get("z", 0.0))
+            bg_text.append(hover_text)
+            
+    # Background Points (Grey, small, faint)
+    fig.add_trace(go.Scatter3d(
+        x=bg_x, y=bg_y, z=bg_z,
+        mode="markers",
+        marker=dict(color="lightgrey", size=3, opacity=0.4),
+        name="Papers",
+        text=bg_text,
+        hoverinfo="text"
+    ))
+    
+    # Retrieved Sources (Green, medium, highlighted)
+    fig.add_trace(go.Scatter3d(
+        x=src_x, y=src_y, z=src_z,
+        mode="markers",
+        marker=dict(color="#4CAF50", size=8, line=dict(color="white", width=1), opacity=0.9),
+        name="Retrieved Sources",
+        text=src_text,
+        hoverinfo="text"
+    ))
+    
+    # User Query (Red star, large)
+    fig.add_trace(go.Scatter3d(
+        x=query_x, y=query_y, z=query_z,
+        mode="markers",
+        marker=dict(color="#F44336", symbol="diamond", size=10, line=dict(color="darkred", width=1)),
+        name="Your Query",
+        text=query_text,
+        hoverinfo="text"
+    ))
+    
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=10, b=0),
+        height=600,
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        scene=dict(
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            zaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+        ),
+        plot_bgcolor="white"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+
 # --- Sidebar ---
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
     top_k = st.slider("Number of sources", min_value=1, max_value=15, value=5)
+    include_vis = st.toggle("🔍 Visualise Embeddings (UMAP)", value=False, help="Enable an interactive 2D map of the papers relative to your question. Requires pre-computed UMAP model.")
 
     st.markdown("---")
 
@@ -286,7 +375,7 @@ if should_query:
             try:
                 response = httpx.post(
                     f"{API_URL}/query",
-                    json={"question": question, "top_k": top_k},
+                    json={"question": question, "top_k": top_k, "include_vis": include_vis},
                     timeout=120.0,
                 )
                 elapsed = time.time() - start
@@ -330,6 +419,10 @@ if should_query:
                     if "latency" in data and data["latency"]:
                         with st.expander("⏱️ Latency Breakdown", expanded=False):
                             render_latency_breakdown(data["latency"])
+                            
+                    # Visualization
+                    if include_vis and data.get("vis_data"):
+                        render_umap_visualization(data["vis_data"])
 
                     # Sources
                     render_sources(data.get("sources", []))

@@ -11,3 +11,5 @@ data/base_model/
 data/finetuned_lora/
 *.gguf
 src/finetuning/.ipynb_checkpoints/
+data/processed/umap_model.pkl
+data/processed/umap_bg.json
