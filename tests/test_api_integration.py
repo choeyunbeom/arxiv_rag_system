@@ -58,6 +58,14 @@ def mock_rag_chain():
             total_ms=19540.8,
         ),
     )
+    
+    # Manually add vis_data attribute to mock response
+    from src.api.models.schemas import VisData, VisPoint
+    chain.query.return_value.vis_data = VisData(
+        points=[
+            VisPoint(x=0.1, y=0.5, z=0.5, is_query=True)
+        ]
+    )
     return chain
 
 
@@ -118,12 +126,12 @@ class TestQueryEndpoint:
     def test_default_top_k(self, client, mock_rag_chain):
         response = client.post("/query", json={"question": "What is QLoRA?"})
         assert response.status_code == 200
-        mock_rag_chain.query.assert_called_with(question="What is QLoRA?", top_k=5)
+        mock_rag_chain.query.assert_called_with(question="What is QLoRA?", top_k=5, include_vis=False)
 
     def test_custom_top_k(self, client, mock_rag_chain):
         response = client.post("/query", json={"question": "What is QLoRA?", "top_k": 10})
         assert response.status_code == 200
-        mock_rag_chain.query.assert_called_with(question="What is QLoRA?", top_k=10)
+        mock_rag_chain.query.assert_called_with(question="What is QLoRA?", top_k=10, include_vis=False)
 
     def test_empty_question_rejected(self, client):
         response = client.post("/query", json={"question": ""})

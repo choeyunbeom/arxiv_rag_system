@@ -74,16 +74,21 @@ def retriever():
         ]
     }
 
+    from unittest.mock import mock_open
+    mock_file_content = json.dumps(mock_chunks_data)
+
     with patch("src.api.core.hybrid_retriever.chromadb.HttpClient") as mock_chroma, \
          patch("src.api.core.hybrid_retriever.httpx.Client"), \
          patch("src.api.core.hybrid_retriever.CrossEncoder"), \
-         patch("builtins.open", return_value=StringIO(json.dumps(mock_chunks_data))), \
+         patch("builtins.open", mock_open(read_data=mock_file_content)), \
          patch.object(sys.modules["rank_bm25"], "BM25Okapi") as MockBM25:
 
         mock_chroma.return_value.get_collection.return_value = MagicMock()
         MockBM25.return_value = MagicMock()
 
-        ret = HybridRetriever()
+        # Disable UMAP file check
+        with patch("pathlib.Path.exists", return_value=False):
+            ret = HybridRetriever()
 
     yield ret
 

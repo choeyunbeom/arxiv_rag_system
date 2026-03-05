@@ -11,8 +11,9 @@ Ask a question in natural language → the system retrieves relevant papers → 
 ![Query → answer flow with source citations and latency breakdown](docs/demo/ui_demo.gif)
 ![Streamlit UI — interactive Q&A interface with source cards and latency breakdown](docs/demo/main_demo.png)
 ![FastAPI Swagger UI — interactive API documentation with example requests and responses](docs/demo/swagger_demo.png)
+![Interactive 3D UMAP Visualization of Embedding Space](docs/demo/umap_demo.png)
 
-> The UI shows the full query flow: enter a question → hybrid retrieval searches 132 arXiv papers → cross-encoder reranks results → Qwen3 4B generates a cited answer. Latency breakdown shows retrieval vs generation time.
+> The UI shows the full query flow: enter a question → hybrid retrieval searches 132 arXiv papers → cross-encoder reranks results → Qwen3 4B generates a cited answer. 3D UMAP visualizations map the query to the semantic space of the arXiv corpus. Latency breakdown shows retrieval vs generation time.
 
 ## Architecture
 
@@ -223,6 +224,9 @@ python -m src.ingestion.pdf_parser
 
 # 3. Index chunks into ChromaDB
 python -m src.ingestion.indexer
+
+# 4. Precompute UMAP 3D Visualization Data (Required for UI Graph)
+python -m scripts.precompute_umap
 ```
 
 ## Engineering Decisions
