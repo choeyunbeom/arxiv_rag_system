@@ -14,7 +14,6 @@ are mocked to isolate pure logic.
 import json
 import math
 import sys
-from io import StringIO
 from unittest.mock import MagicMock, patch
 
 import pytest

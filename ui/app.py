@@ -170,25 +170,25 @@ def render_umap_visualization(vis_data: dict):
     if not vis_data or "points" not in vis_data:
         st.warning("No visualization data available.")
         return
-        
+
     points = vis_data["points"]
     if not points:
         return
-        
+
     fig = go.Figure()
-    
+
     # Separate points
     bg_x, bg_y, bg_z, bg_text = [], [], [], []
     src_x, src_y, src_z, src_text = [], [], [], []
     query_x, query_y, query_z, query_text = [], [], [], []
-    
+
     import textwrap
-    
+
     for p in points:
         hover_text = f"<b>{p.get('title', 'Unknown')}</b><br>" \
                      f"Section: {p.get('section', 'N/A')}<br><br>" \
                      f"{textwrap.shorten(p.get('text_preview', ''), width=80)}"
-                     
+
         if p.get("is_query"):
             query_x.append(p["x"])
             query_y.append(p["y"])
@@ -204,7 +204,7 @@ def render_umap_visualization(vis_data: dict):
             bg_y.append(p["y"])
             bg_z.append(p.get("z", 0.0))
             bg_text.append(hover_text)
-            
+
     # Background Points (Grey, small, faint)
     fig.add_trace(go.Scatter3d(
         x=bg_x, y=bg_y, z=bg_z,
@@ -214,7 +214,7 @@ def render_umap_visualization(vis_data: dict):
         text=bg_text,
         hoverinfo="text"
     ))
-    
+
     # Retrieved Sources (Green, medium, highlighted)
     fig.add_trace(go.Scatter3d(
         x=src_x, y=src_y, z=src_z,
@@ -224,7 +224,7 @@ def render_umap_visualization(vis_data: dict):
         text=src_text,
         hoverinfo="text"
     ))
-    
+
     # User Query (Red star, large)
     fig.add_trace(go.Scatter3d(
         x=query_x, y=query_y, z=query_z,
@@ -234,7 +234,7 @@ def render_umap_visualization(vis_data: dict):
         text=query_text,
         hoverinfo="text"
     ))
-    
+
     fig.update_layout(
         margin=dict(l=0, r=0, t=10, b=0),
         height=600,
@@ -247,7 +247,7 @@ def render_umap_visualization(vis_data: dict):
         ),
         plot_bgcolor="white"
     )
-    
+
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
@@ -419,7 +419,7 @@ if should_query:
                     if "latency" in data and data["latency"]:
                         with st.expander("⏱️ Latency Breakdown", expanded=False):
                             render_latency_breakdown(data["latency"])
-                            
+
                     # Visualization
                     if include_vis and data.get("vis_data"):
                         render_umap_visualization(data["vis_data"])

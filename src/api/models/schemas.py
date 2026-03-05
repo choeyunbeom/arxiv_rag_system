@@ -62,7 +62,7 @@ class LatencyBreakdown(BaseModel):
 
 class VisPoint(BaseModel):
     """A single embedding point transformed into 2D via UMAP."""
-    
+
     chunk_id: str | None = Field(default=None, description="The ID of the chunk, None for query")
     x: float = Field(description="3D X coordinate")
     y: float = Field(description="3D Y coordinate")

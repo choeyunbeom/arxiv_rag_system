@@ -14,7 +14,6 @@ from dataclasses import dataclass
 
 import chromadb
 import httpx
-import numpy as np
 from rank_bm25 import BM25Okapi
 from sentence_transformers import CrossEncoder
 

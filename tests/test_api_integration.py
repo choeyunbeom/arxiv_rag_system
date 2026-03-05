@@ -58,7 +58,7 @@ def mock_rag_chain():
             total_ms=19540.8,
         ),
     )
-    
+
     # Manually add vis_data attribute to mock response
     from src.api.models.schemas import VisData, VisPoint
     chain.query.return_value.vis_data = VisData(
