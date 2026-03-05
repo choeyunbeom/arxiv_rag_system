@@ -5,7 +5,9 @@ and `data/processed/umap_model.pkl` containing the fitted UMAP reducer for trans
 new query embeddings in real time.
 """
 import json
+import os
 import pickle
+from pathlib import Path
 
 import chromadb
 import numpy as np
@@ -35,22 +37,18 @@ def main():
     if embeddings is None or len(embeddings) == 0:
         print("No embeddings found in the collection.")
         return
-
     ids = data["ids"]
     metadatas = data["metadatas"]
     documents = data["documents"]
 
     print(f"Loaded {len(embeddings)} embeddings.")
-
     # Fit UMAP
     print("Fitting UMAP model (3D) (this may take a minute depending on count)...")
     reducer = umap.UMAP(n_components=3, n_neighbors=15, min_dist=0.1, metric="cosine", random_state=42)
     # converting to numpy array
     X = np.array(embeddings)
     embedding_2d = reducer.fit_transform(X)
-
     print("UMAP fitted.")
-
     # Save the model
     UMAP_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(UMAP_MODEL_PATH, "wb") as f:
@@ -65,11 +63,9 @@ def main():
         # depending on version, so we handle it safely.
         title = meta.get("title", "Unknown Title")
         section = meta.get("section", "Unknown Section")
-
         # truncated document text for tooltip
         text = documents[i]
         text_preview = " ".join(text.split()[:30]) + "..."
-
         bg_data.append({
             "chunk_id": ids[i],
             "x": float(embedding_2d[i][0]),
@@ -79,10 +75,8 @@ def main():
             "section": section,
             "text_preview": text_preview
         })
-
     with open(UMAP_BG_JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(bg_data, f, ensure_ascii=False)
-
     print(f"Background coordinates saved to {UMAP_BG_JSON_PATH}")
     print("Done!")
 

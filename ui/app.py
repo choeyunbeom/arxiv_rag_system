@@ -170,20 +170,16 @@ def render_umap_visualization(vis_data: dict):
     if not vis_data or "points" not in vis_data:
         st.warning("No visualization data available.")
         return
-
     points = vis_data["points"]
     if not points:
         return
 
     fig = go.Figure()
-
     # Separate points
     bg_x, bg_y, bg_z, bg_text = [], [], [], []
     src_x, src_y, src_z, src_text = [], [], [], []
     query_x, query_y, query_z, query_text = [], [], [], []
-
     import textwrap
-
     for p in points:
         hover_text = f"<b>{p.get('title', 'Unknown')}</b><br>" \
                      f"Section: {p.get('section', 'N/A')}<br><br>" \
@@ -247,7 +243,11 @@ def render_umap_visualization(vis_data: dict):
         ),
         plot_bgcolor="white"
     )
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> origin/main
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
@@ -419,6 +419,10 @@ if should_query:
                     if "latency" in data and data["latency"]:
                         with st.expander("⏱️ Latency Breakdown", expanded=False):
                             render_latency_breakdown(data["latency"])
+                            
+                    # Visualization
+                    if include_vis and data.get("vis_data"):
+                        render_umap_visualization(data["vis_data"])
 
                     # Visualization
                     if include_vis and data.get("vis_data"):

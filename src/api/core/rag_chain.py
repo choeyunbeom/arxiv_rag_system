@@ -101,6 +101,52 @@ class RAGChain:
         sources = self._deduplicate_sources(chunks)
 
         total_ms = (time.perf_counter() - total_start) * 1000
+        
+        # 6. Build UMAP Visualization Data if requested
+        vis_data = None
+        if include_vis and self.retriever.umap_reducer and self.retriever.umap_bg_data and query_emb:
+            from src.api.models.schemas import VisData, VisPoint
+            import numpy as np
+            
+            # transform query
+            query_3d = self.retriever.umap_reducer.transform(np.array([query_emb]))[0]
+            
+            points = []
+            
+            # Add background points
+            source_cids = {c.chunk_id for c in chunks}
+            for bg in self.retriever.umap_bg_data:
+                is_source = bg["chunk_id"] in source_cids
+                points.append(
+                    VisPoint(
+                        chunk_id=bg["chunk_id"],
+                        x=bg["x"],
+                        y=bg["y"],
+                        z=bg.get("z", 0.0),
+                        title=bg["title"],
+                        section=bg["section"],
+                        text_preview=bg["text_preview"],
+                        is_source=is_source,
+                        is_query=False
+                    )
+                )
+                
+            # Add Query point
+            points.append(
+                VisPoint(
+                    chunk_id=None,
+                    x=float(query_3d[0]),
+                    y=float(query_3d[1]),
+                    z=float(query_3d[2]),
+                    title="User Query",
+                    section=None,
+                    text_preview=question,
+                    is_source=False,
+                    is_query=True
+                )
+            )
+            
+            vis_data = VisData(points=points)
 
         # 6. Build UMAP Visualization Data if requested
         vis_data = None
