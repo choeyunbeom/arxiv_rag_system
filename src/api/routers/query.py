@@ -51,7 +51,7 @@ router = APIRouter()
         },
     },
 )
-def query(request: QueryRequest, req: Request):
+async def query(request: QueryRequest, req: Request):
     """
     Answer a question using Retrieval-Augmented Generation over arXiv papers.
 
@@ -74,7 +74,7 @@ def query(request: QueryRequest, req: Request):
         )
 
     try:
-        result = rag_chain.query(
+        result = await rag_chain.query(
             question=request.question,
             top_k=request.top_k,
             include_vis=request.include_vis,
