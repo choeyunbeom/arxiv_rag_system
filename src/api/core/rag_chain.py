@@ -77,13 +77,13 @@ class RAGChain:
                 )
         return list(seen.values())
 
-    def query(self, question: str, top_k: int = 5, include_vis: bool = False) -> RAGResponse:
+    async def query(self, question: str, top_k: int = 5, include_vis: bool = False) -> RAGResponse:
         """Run the full RAG pipeline: retrieve -> format -> generate."""
         total_start = time.perf_counter()
 
         # 1. Retrieve relevant chunks
         retrieval_start = time.perf_counter()
-        chunks, query_emb = self.retriever.search(question, top_k=top_k, get_embeddings=include_vis)
+        chunks, query_emb = await self.retriever.search(question, top_k=top_k, get_embeddings=include_vis)
         retrieval_ms = (time.perf_counter() - retrieval_start) * 1000
 
         # 2. Format context
@@ -94,60 +94,13 @@ class RAGChain:
 
         # 4. Generate answer
         generation_start = time.perf_counter()
-        answer = self.llm.generate(prompt=prompt, system=self.system_prompt)
+        answer = await self.llm.generate(prompt=prompt, system=self.system_prompt)
         generation_ms = (time.perf_counter() - generation_start) * 1000
 
         # 5. Collect sources
         sources = self._deduplicate_sources(chunks)
 
         total_ms = (time.perf_counter() - total_start) * 1000
-
-        # 6. Build UMAP Visualization Data if requested
-        vis_data = None
-        if include_vis and self.retriever.umap_reducer and self.retriever.umap_bg_data and query_emb:
-            import numpy as np
-
-            from src.api.models.schemas import VisData, VisPoint
-
-            # transform query
-            query_3d = self.retriever.umap_reducer.transform(np.array([query_emb]))[0]
-
-            points = []
-
-            # Add background points
-            source_cids = {c.chunk_id for c in chunks}
-            for bg in self.retriever.umap_bg_data:
-                is_source = bg["chunk_id"] in source_cids
-                points.append(
-                    VisPoint(
-                        chunk_id=bg["chunk_id"],
-                        x=bg["x"],
-                        y=bg["y"],
-                        z=bg.get("z", 0.0),
-                        title=bg["title"],
-                        section=bg["section"],
-                        text_preview=bg["text_preview"],
-                        is_source=is_source,
-                        is_query=False
-                    )
-                )
-
-            # Add Query point
-            points.append(
-                VisPoint(
-                    chunk_id=None,
-                    x=float(query_3d[0]),
-                    y=float(query_3d[1]),
-                    z=float(query_3d[2]),
-                    title="User Query",
-                    section=None,
-                    text_preview=question,
-                    is_source=False,
-                    is_query=True
-                )
-            )
-
-            vis_data = VisData(points=points)
 
         # 6. Build UMAP Visualization Data if requested
         vis_data = None

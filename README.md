@@ -302,6 +302,7 @@ Additional contributing factors include catastrophic forgetting in the 4B model 
 | 5 | Fine-Tuning & Eval | LoRA training, GGUF conversion, Ollama deployment. Honest evaluation showing regression — analysed root causes. |
 | 6 | Testing & CI/CD | 104 tests (unit + integration). GitHub Actions CI. Docker Compose full-stack deployment. Few-shot experiment revealing training data contamination as fine-tuning root cause. |
 | 7 | UI & Demo | Streamlit UI improvements (error handling, latency visualisation). API documentation. Makefile + Docker healthchecks. BERTScore semantic evaluation. |
+| 8 | Async Refactoring & Bug Fixes | Full async pipeline (httpx.AsyncClient, async/await throughout). 7 bugs fixed. All 104 tests passing. |
 
 ## Detailed Logs
 
@@ -312,15 +313,38 @@ For full experiment data, debugging notes, and the project retrospective:
 - [Embedding Model Debugging](docs/embedding_model_debugging.md)
 - [Retrieval Optimisation Experiments](docs/retrieval_optimisation.md)
 - [Fine-Tuning Experiment Log](docs/finetuning_experiment.md)
+---
+## Async Refactoring 
+
+The entire request pipeline was blocking — `httpx.Client` in both `HybridRetriever` and `LLMClient` meant every query tied up a thread waiting on I/O. Refactored to fully async.
+
+### What Changed
+
+| File | Change |
+|------|--------|
+| `hybrid_retriever.py` | `httpx.Client` → `httpx.AsyncClient`, `search()` and `_embed_query()` → `async def` |
+| `llm_client.py` | `httpx.Client` → `httpx.AsyncClient`, `generate()` → `async def` |
+| `rag_chain.py` | `query()` → `async def`, `await retriever.search()`, `await llm.generate()` |
+| `routers/query.py` | `def query()` → `async def query()`, `await rag_chain.query()` |
+| `evaluation/evaluate.py` | All evaluation functions → `async def`, `asyncio.run()` entry point |
+
+### Bugs Fixed
+
+1. **UMAP dead code** — `rag_chain.py` had identical UMAP computation blocks written twice; the second overwrote the first silently
+2. **Tuple unpacking** — `evaluate.py` called `retriever.search()` without unpacking the `(chunks, embeddings)` tuple, causing a runtime `TypeError`
+3. **HTTP client leak** — `HybridRetriever` and `LLMClient` never closed their `httpx` clients; added `__del__()` cleanup
+4. **Chunker condition bug** — `if not sections or "full_text" in sections` incorrectly merged two distinct cases into one branch; split into explicit `if/elif`
+5. **MD5 → SHA256** — `generate_chunk_id()` used `hashlib.md5` which fails on FIPS-compliant systems; replaced with `sha256`
+6. **`/no_think` duplication** — Qwen3's `no_think` directive was injected into both `system` and `prompt` fields; removed from `prompt` (only needed in `system`)
+7. **Import ordering (E402)** — `indexer.py` declared `logger` between `import` statements, violating PEP 8 module-level import ordering enforced by ruff
+
+All 104 tests pass after these changes.
 
 ## Known Limitations & Scaling Considerations
 
-- **In-memory BM25**: All chunks loaded into memory. Sufficient for 132 papers (~5K chunks), 
-  but would require ElasticSearch/OpenSearch for larger corpora.
-- **Synchronous Ollama calls**: Embedding and generation use blocking `httpx.Client`. 
-  Adequate for single-user demo; multi-user serving would need `httpx.AsyncClient` with async/await.
-- **Ollama not containerised**: Runs on host for Apple Silicon Metal GPU access. 
-  For cloud deployment, would need a GPU-enabled container or API-based LLM service.
+- **In-memory BM25**: All chunks loaded into memory. Sufficient for 132 papers (~5K chunks), but would require ElasticSearch/OpenSearch for larger corpora.
+- **Single-worker FastAPI**: Currently runs with a single Uvicorn worker. Horizontal scaling would require a shared-state solution for the BM25 index (currently in-process memory).
+- **Ollama not containerised**: Runs on host for Apple Silicon Metal GPU access. For cloud deployment, would need a GPU-enabled container or API-based LLM service.
 
 ## License
 

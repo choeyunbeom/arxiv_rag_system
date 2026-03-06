@@ -54,7 +54,7 @@ class Chunk:
 
 def generate_chunk_id(arxiv_id: str, section: str, index: int) -> str:
     raw = f"{arxiv_id}:{section}:{index}"
-    return hashlib.md5(raw.encode()).hexdigest()[:12]
+    return hashlib.sha256(raw.encode()).hexdigest()[:12]
 
 
 def strip_references_from_text(text: str) -> str:
@@ -196,9 +196,13 @@ def chunk_paper(paper: dict) -> list[Chunk]:
     chunks = []
     sections = paper.get("sections", {})
 
-    if not sections or "full_text" in sections:
+    if not sections:
         full = paper.get("full_text", "")
         full = strip_references_from_text(full)
+        sections = {"full_text": full}
+    elif "full_text" in sections and len(sections) == 1:
+        # Only full_text key present — strip references from it
+        full = strip_references_from_text(sections["full_text"])
         sections = {"full_text": full}
 
     for section_name, section_text in sections.items():

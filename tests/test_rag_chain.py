@@ -9,7 +9,7 @@ Tests cover:
 """
 
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -177,11 +177,12 @@ class TestDeduplicateSources:
 # ──────────────────────────────────────────────
 
 class TestQuery:
-    def test_returns_rag_response(self, mock_rag_chain, sample_chunks):
-        mock_rag_chain._mock_retriever.search.return_value = (sample_chunks, None)
-        mock_rag_chain._mock_llm.generate.return_value = "RAG is a technique."
+    @pytest.mark.asyncio
+    async def test_returns_rag_response(self, mock_rag_chain, sample_chunks):
+        mock_rag_chain._mock_retriever.search = AsyncMock(return_value=(sample_chunks, None))
+        mock_rag_chain._mock_llm.generate = AsyncMock(return_value="RAG is a technique.")
 
-        response = mock_rag_chain.query("What is RAG?")
+        response = await mock_rag_chain.query("What is RAG?")
         assert isinstance(response, RAGResponse)
         assert response.answer == "RAG is a technique."
         assert response.query == "What is RAG?"
@@ -191,15 +192,17 @@ class TestQuery:
         assert response.latency.generation_ms >= 0
         assert response.latency.total_ms >= 0
 
-    def test_passes_system_prompt_to_llm(self, mock_rag_chain, sample_chunks):
-        mock_rag_chain._mock_retriever.search.return_value = (sample_chunks, None)
-        mock_rag_chain._mock_llm.generate.return_value = "Answer"
+    @pytest.mark.asyncio
+    async def test_passes_system_prompt_to_llm(self, mock_rag_chain, sample_chunks):
+        mock_rag_chain._mock_retriever.search = AsyncMock(return_value=(sample_chunks, None))
+        mock_rag_chain._mock_llm.generate = AsyncMock(return_value="Answer")
 
-        mock_rag_chain.query("test question")
+        await mock_rag_chain.query("test question")
         call_kwargs = mock_rag_chain._mock_llm.generate.call_args
         assert call_kwargs.kwargs["system"] == SYSTEM_PROMPT_ZERO_SHOT
 
-    def test_custom_prompt_passed_to_llm(self, sample_chunks):
+    @pytest.mark.asyncio
+    async def test_custom_prompt_passed_to_llm(self, sample_chunks):
         with patch("src.api.core.rag_chain.Retriever") as MockRet, \
              patch("src.api.core.rag_chain.LLMClient") as MockLLM:
 
@@ -208,27 +211,29 @@ class TestQuery:
             MockRet.return_value = mock_ret
             MockLLM.return_value = mock_llm
 
-            mock_ret.search.return_value = (sample_chunks, None)
-            mock_llm.generate.return_value = "Answer"
+            mock_ret.search = AsyncMock(return_value=(sample_chunks, None))
+            mock_llm.generate = AsyncMock(return_value="Answer")
 
             chain = RAGChain(system_prompt="Custom system prompt")
-            chain.query("test")
+            await chain.query("test")
 
             call_kwargs = mock_llm.generate.call_args
             assert call_kwargs.kwargs["system"] == "Custom system prompt"
 
-    def test_top_k_forwarded(self, mock_rag_chain):
-        mock_rag_chain._mock_retriever.search.return_value = ([], None)
-        mock_rag_chain._mock_llm.generate.return_value = ""
+    @pytest.mark.asyncio
+    async def test_top_k_forwarded(self, mock_rag_chain):
+        mock_rag_chain._mock_retriever.search = AsyncMock(return_value=([], None))
+        mock_rag_chain._mock_llm.generate = AsyncMock(return_value="")
 
-        mock_rag_chain.query("test", top_k=10)
+        await mock_rag_chain.query("test", top_k=10)
         mock_rag_chain._mock_retriever.search.assert_called_with("test", top_k=10, get_embeddings=False)
 
-    def test_context_included_in_prompt(self, mock_rag_chain, sample_chunks):
-        mock_rag_chain._mock_retriever.search.return_value = (sample_chunks, None)
-        mock_rag_chain._mock_llm.generate.return_value = "Answer"
+    @pytest.mark.asyncio
+    async def test_context_included_in_prompt(self, mock_rag_chain, sample_chunks):
+        mock_rag_chain._mock_retriever.search = AsyncMock(return_value=(sample_chunks, None))
+        mock_rag_chain._mock_llm.generate = AsyncMock(return_value="Answer")
 
-        mock_rag_chain.query("What is RAG?")
+        await mock_rag_chain.query("What is RAG?")
         call_args = mock_rag_chain._mock_llm.generate.call_args
         prompt = call_args.kwargs["prompt"]
         assert "Paper A" in prompt

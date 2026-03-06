@@ -7,6 +7,7 @@ Evaluation Pipeline
 - Supports prompt injection for few-shot / ablation experiments
 """
 
+import asyncio
 import json
 import time
 from datetime import datetime
@@ -19,14 +20,14 @@ from src.evaluation.eval_dataset import EVAL_DATASET
 RESULTS_DIR = DATA_DIR / "processed"
 
 
-def evaluate_retrieval(retriever: Retriever, dataset: list[dict], top_k: int = 5) -> dict:
+async def evaluate_retrieval(retriever: Retriever, dataset: list[dict], top_k: int = 5) -> dict:
     """Evaluate retrieval quality."""
     hits = 0
     reciprocal_ranks = []
     precision_scores = []
 
     for item in dataset:
-        results = retriever.search(item["question"], top_k=top_k)
+        results, _ = await retriever.search(item["question"], top_k=top_k)
         retrieved_ids = [r.arxiv_id for r in results]
 
         # Hit Rate: is any expected paper in top-k?
@@ -55,7 +56,7 @@ def evaluate_retrieval(retriever: Retriever, dataset: list[dict], top_k: int = 5
     }
 
 
-def evaluate_answers(rag_chain: RAGChain, dataset: list[dict], top_k: int = 5) -> dict:
+async def evaluate_answers(rag_chain: RAGChain, dataset: list[dict], top_k: int = 5) -> dict:
     """Evaluate answer quality."""
     results = []
     total_time = 0
@@ -64,7 +65,7 @@ def evaluate_answers(rag_chain: RAGChain, dataset: list[dict], top_k: int = 5) -
         print(f"  [{i+1}/{len(dataset)}] {item['question'][:50]}...")
 
         start = time.time()
-        response = rag_chain.query(item["question"], top_k=top_k)
+        response = await rag_chain.query(item["question"], top_k=top_k)
         elapsed = time.time() - start
         total_time += elapsed
 
@@ -117,7 +118,7 @@ def evaluate_answers(rag_chain: RAGChain, dataset: list[dict], top_k: int = 5) -
     }
 
 
-def run_evaluation(
+async def run_evaluation(
     top_k: int = 5,
     label: str = "baseline",
     system_prompt: str | None = None,
@@ -147,14 +148,14 @@ def run_evaluation(
 
     # 1. Retrieval evaluation (prompt-independent — same for all experiments)
     print("Evaluating retrieval...")
-    retrieval_metrics = evaluate_retrieval(retriever, EVAL_DATASET, top_k=top_k)
+    retrieval_metrics = await evaluate_retrieval(retriever, EVAL_DATASET, top_k=top_k)
     print(f"  Hit Rate:  {retrieval_metrics['hit_rate']:.2%}")
     print(f"  MRR:       {retrieval_metrics['mrr']:.4f}")
     print(f"  Precision: {retrieval_metrics['avg_precision']:.2%}")
 
     # 2. Answer evaluation (affected by prompt)
     print("\nEvaluating answers...")
-    answer_metrics = evaluate_answers(rag_chain, EVAL_DATASET, top_k=top_k)
+    answer_metrics = await evaluate_answers(rag_chain, EVAL_DATASET, top_k=top_k)
     summary = answer_metrics["summary"]
     print(f"\n  Keyword Coverage:  {summary['avg_keyword_coverage']:.2%}")
     print(f"  Source Hit Rate:   {summary['source_hit_rate']:.2%}")
@@ -186,4 +187,4 @@ def run_evaluation(
 
 
 if __name__ == "__main__":
-    run_evaluation(top_k=5, label="baseline_zeroshot")
+    asyncio.run(run_evaluation(top_k=5, label="baseline_zeroshot"))

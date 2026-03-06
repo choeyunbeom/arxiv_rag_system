@@ -77,7 +77,7 @@ def retriever():
     mock_file_content = json.dumps(mock_chunks_data)
 
     with patch("src.api.core.hybrid_retriever.chromadb.HttpClient") as mock_chroma, \
-         patch("src.api.core.hybrid_retriever.httpx.Client"), \
+         patch("src.api.core.hybrid_retriever.httpx.AsyncClient"), \
          patch("src.api.core.hybrid_retriever.CrossEncoder"), \
          patch("builtins.open", mock_open(read_data=mock_file_content)), \
          patch.object(sys.modules["rank_bm25"], "BM25Okapi") as MockBM25:

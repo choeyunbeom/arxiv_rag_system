@@ -45,7 +45,7 @@ class HybridRetriever:
         self.collection = self.chroma_client.get_collection(settings.COLLECTION_NAME)
 
         # Persistent HTTP client for connection pooling
-        self._http_client = httpx.Client(timeout=30.0)
+        self._http_client = httpx.AsyncClient(timeout=30.0)
 
         # BM25 search
         self._build_bm25_index()
@@ -59,6 +59,17 @@ class HybridRetriever:
         self.umap_reducer = None
         self.umap_bg_data = None
         self._load_umap()
+
+    def __del__(self):
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self._http_client.aclose())
+            else:
+                loop.run_until_complete(self._http_client.aclose())
+        except Exception:
+            pass
 
     def _load_umap(self):
         """Load precomputed UMAP model and background points if available."""
@@ -89,9 +100,9 @@ class HybridRetriever:
         tokenized = [self._tokenize(c["text"]) for c in self.chunks_data]
         self.bm25 = BM25Okapi(tokenized)
 
-    def _embed_query(self, query: str) -> list[float]:
+    async def _embed_query(self, query: str) -> list[float]:
         """Embed a query using Ollama."""
-        response = self._http_client.post(
+        response = await self._http_client.post(
             f"http://{settings.OLLAMA_HOST}/api/embed",
             json={"model": settings.EMBED_MODEL, "input": [query]},
         )
@@ -178,11 +189,11 @@ class HybridRetriever:
                 break
         return deduped
 
-    def search(self, query: str, top_k: int = 5, get_embeddings: bool = False) -> tuple[list[RetrievedChunk], list[float] | None]:
+    async def search(self, query: str, top_k: int = 5, get_embeddings: bool = False) -> tuple[list[RetrievedChunk], list[float] | None]:
         """Hybrid search with reranking and deduplication."""
         # Stage 1: Fetch broad candidates
         fetch_k = top_k * 8  # Get 40 candidates for better coverage
-        query_embedding = self._embed_query(query)
+        query_embedding = await self._embed_query(query)
 
         vector_ranks = self._vector_search(query_embedding, fetch_k)
         bm25_ranks = self._bm25_search(query, fetch_k)
