@@ -5,16 +5,15 @@ ChromaDB Indexer (v4)
 - If a batch fails, tries each chunk individually and skips only the broken ones
 """
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 import json
+import logging
 
 import chromadb
 import httpx
 
 from src.api.core.config import DATA_DIR, settings
+
+logger = logging.getLogger(__name__)
 
 PROCESSED_DIR = DATA_DIR / "processed"
 CHUNKS_FILE = PROCESSED_DIR / "chunks.json"
