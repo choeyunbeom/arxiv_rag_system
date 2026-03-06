@@ -10,9 +10,10 @@ Tests cover:
 External dependency (Ollama HTTP API) is mocked.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import pytest_asyncio
 
 from src.api.core.llm_client import LLMClient
 
@@ -22,8 +23,8 @@ from src.api.core.llm_client import LLMClient
 
 @pytest.fixture
 def client():
-    """Create an LLMClient with mocked HTTP client."""
-    with patch("src.api.core.llm_client.httpx.Client") as MockClient:
+    """Create an LLMClient with mocked async HTTP client."""
+    with patch("src.api.core.llm_client.httpx.AsyncClient") as MockClient:
         mock_http = MagicMock()
         MockClient.return_value = mock_http
         llm = LLMClient(model="qwen3:4b")
@@ -79,98 +80,89 @@ class TestCleanResponse:
 # generate — payload construction
 # ──────────────────────────────────────────────
 
-class TestGenerate:
-    def test_no_think_injected_in_prompt(self, client):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "Test answer"}
-        mock_response.raise_for_status = MagicMock()
-        client._mock_http.post.return_value = mock_response
+def _make_mock_response(text="Answer"):
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"response": text}
+    mock_response.raise_for_status = MagicMock()
+    return mock_response
 
-        client.generate(prompt="What is RAG?", system="Be helpful.")
+
+class TestGenerate:
+    @pytest.mark.asyncio
+    async def test_no_think_injected_in_system_only(self, client):
+        client._mock_http.post = AsyncMock(return_value=_make_mock_response("Test answer"))
+
+        await client.generate(prompt="What is RAG?", system="Be helpful.")
         call_args = client._mock_http.post.call_args
         payload = call_args.kwargs["json"]
 
-        assert payload["prompt"].startswith("/no_think")
+        # prompt should NOT have /no_think (removed from prompt)
+        assert not payload["prompt"].startswith("/no_think")
+        # system SHOULD have /no_think
         assert payload["system"].startswith("/no_think")
 
-    def test_default_temperature(self, client):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "Answer"}
-        mock_response.raise_for_status = MagicMock()
-        client._mock_http.post.return_value = mock_response
+    @pytest.mark.asyncio
+    async def test_default_temperature(self, client):
+        client._mock_http.post = AsyncMock(return_value=_make_mock_response())
 
-        client.generate(prompt="test")
+        await client.generate(prompt="test")
         payload = client._mock_http.post.call_args.kwargs["json"]
         assert payload["options"]["temperature"] == 0.3
 
-    def test_custom_temperature(self, client):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "Answer"}
-        mock_response.raise_for_status = MagicMock()
-        client._mock_http.post.return_value = mock_response
+    @pytest.mark.asyncio
+    async def test_custom_temperature(self, client):
+        client._mock_http.post = AsyncMock(return_value=_make_mock_response())
 
-        client.generate(prompt="test", temperature=0.7)
+        await client.generate(prompt="test", temperature=0.7)
         payload = client._mock_http.post.call_args.kwargs["json"]
         assert payload["options"]["temperature"] == 0.7
 
-    def test_num_predict_set(self, client):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "Answer"}
-        mock_response.raise_for_status = MagicMock()
-        client._mock_http.post.return_value = mock_response
+    @pytest.mark.asyncio
+    async def test_num_predict_set(self, client):
+        client._mock_http.post = AsyncMock(return_value=_make_mock_response())
 
-        client.generate(prompt="test")
+        await client.generate(prompt="test")
         payload = client._mock_http.post.call_args.kwargs["json"]
         assert payload["options"]["num_predict"] == 2048
 
-    def test_stream_disabled(self, client):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "Answer"}
-        mock_response.raise_for_status = MagicMock()
-        client._mock_http.post.return_value = mock_response
+    @pytest.mark.asyncio
+    async def test_stream_disabled(self, client):
+        client._mock_http.post = AsyncMock(return_value=_make_mock_response())
 
-        client.generate(prompt="test")
+        await client.generate(prompt="test")
         payload = client._mock_http.post.call_args.kwargs["json"]
         assert payload["stream"] is False
 
-    def test_system_prompt_omitted_when_empty(self, client):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "Answer"}
-        mock_response.raise_for_status = MagicMock()
-        client._mock_http.post.return_value = mock_response
+    @pytest.mark.asyncio
+    async def test_system_prompt_omitted_when_empty(self, client):
+        client._mock_http.post = AsyncMock(return_value=_make_mock_response())
 
-        client.generate(prompt="test", system="")
+        await client.generate(prompt="test", system="")
         payload = client._mock_http.post.call_args.kwargs["json"]
         assert "system" not in payload
 
-    def test_response_cleaned(self, client):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "response": "<think>Reasoning.</think>Clean answer."
-        }
-        mock_response.raise_for_status = MagicMock()
-        client._mock_http.post.return_value = mock_response
+    @pytest.mark.asyncio
+    async def test_response_cleaned(self, client):
+        client._mock_http.post = AsyncMock(
+            return_value=_make_mock_response("<think>Reasoning.</think>Clean answer.")
+        )
 
-        result = client.generate(prompt="test", system="Be helpful.")
+        result = await client.generate(prompt="test", system="Be helpful.")
         assert result == "Clean answer."
 
-    def test_model_name_in_payload(self, client):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "Answer"}
-        mock_response.raise_for_status = MagicMock()
-        client._mock_http.post.return_value = mock_response
+    @pytest.mark.asyncio
+    async def test_model_name_in_payload(self, client):
+        client._mock_http.post = AsyncMock(return_value=_make_mock_response())
 
-        client.generate(prompt="test")
+        await client.generate(prompt="test")
         payload = client._mock_http.post.call_args.kwargs["json"]
         assert payload["model"] == "qwen3:4b"
 
-    def test_correct_endpoint(self, client):
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "Answer"}
-        mock_response.raise_for_status = MagicMock()
-        client._mock_http.post.return_value = mock_response
+    @pytest.mark.asyncio
+    async def test_correct_endpoint(self, client):
+        client._mock_http.post = AsyncMock(return_value=_make_mock_response())
 
-        client.generate(prompt="test")
+        await client.generate(prompt="test")
         call_args = client._mock_http.post.call_args
         url = call_args.args[0]
         assert url.endswith("/api/generate")

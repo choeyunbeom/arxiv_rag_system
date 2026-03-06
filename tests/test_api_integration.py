@@ -11,7 +11,7 @@ Covers:
 """
 
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -33,7 +33,8 @@ from src.api.core.rag_chain import LatencyInfo, RAGChain, RAGResponse, Source
 def mock_rag_chain():
     """Create a mock RAGChain that returns predictable responses."""
     chain = MagicMock(spec=RAGChain)
-    chain.query.return_value = RAGResponse(
+    from src.api.models.schemas import VisData, VisPoint
+    rag_response = RAGResponse(
         answer="RAG combines retrieval with generation to produce grounded answers.",
         sources=[
             Source(
@@ -58,14 +59,8 @@ def mock_rag_chain():
             total_ms=19540.8,
         ),
     )
-
-    # Manually add vis_data attribute to mock response
-    from src.api.models.schemas import VisData, VisPoint
-    chain.query.return_value.vis_data = VisData(
-        points=[
-            VisPoint(x=0.1, y=0.5, z=0.5, is_query=True)
-        ]
-    )
+    rag_response.vis_data = VisData(points=[VisPoint(x=0.1, y=0.5, z=0.5, is_query=True)])
+    chain.query = AsyncMock(return_value=rag_response)
     return chain
 
 
