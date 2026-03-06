@@ -250,7 +250,7 @@ def render_umap_visualization(vis_data: dict):
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
     top_k = st.slider("Number of sources", min_value=1, max_value=15, value=5)
-    include_vis = st.toggle("🔍 Visualise Embeddings (UMAP)", value=False, help="Enable an interactive 2D map of the papers relative to your question. Requires pre-computed UMAP model.")
+    include_vis = st.toggle("🔍 Visualise Embeddings (UMAP)", value=True, help="Enable an interactive 3D map of the papers relative to your question. Requires pre-computed UMAP model.")
 
     st.markdown("---")
 
