@@ -625,3 +625,71 @@ curl http://localhost:8000/health  # Verify: {"status":"healthy","ollama":true,"
 - Week 3 roadmap (UI & Demo) fully complete.
 - RAG system is now production-ready with robust error handling, fully documented APIs, and clear bottleneck visibility via latency profiling.
 - All code pushed to GitHub.
+
+---
+
+### Day 8 (2025-03-06)
+
+#### Async Pipeline Refactoring
+
+The entire I/O path was blocking. `HybridRetriever` and `LLMClient` both used `httpx.Client` (synchronous), which meant every query tied up a thread waiting on network I/O — incompatible with FastAPI's async event loop and a scalability bottleneck for concurrent requests. Refactored to fully async throughout the stack.
+
+**Changes**:
+
+| File | Change |
+|------|--------|
+| `hybrid_retriever.py` | `httpx.Client` → `httpx.AsyncClient`; `_embed_query()` and `search()` → `async def`; `await` on all HTTP calls |
+| `llm_client.py` | `httpx.Client` → `httpx.AsyncClient`; `generate()` → `async def`; `await` on HTTP post |
+| `rag_chain.py` | `query()` → `async def`; `await self.retriever.search()`; `await self.llm.generate()` |
+| `routers/query.py` | endpoint handler `def query()` → `async def query()`; `await rag_chain.query()` |
+| `evaluation/evaluate.py` | `evaluate_retrieval()`, `evaluate_answers()`, `run_evaluation()` all → `async def`; `asyncio.run()` at entry point |
+
+**HTTP client lifecycle**: Added `__del__()` to both `HybridRetriever` and `LLMClient` to close the `httpx.AsyncClient` on garbage collection, preventing connection leaks in the test environment.
+
+#### Bug Fixes (7 total)
+
+1. **UMAP dead code** (`rag_chain.py`): Identical UMAP projection block written twice — the second block silently overwrote the first. Removed the first (dead) block.
+
+2. **Tuple unpacking** (`evaluation/evaluate.py`): `retriever.search()` returns `(chunks, embeddings)` but the call site treated the return as a plain list. Added correct unpacking: `results, _ = await retriever.search(...)`.
+
+3. **HTTP client leak** (`hybrid_retriever.py`, `llm_client.py`): `httpx.Client` instances were never closed. Added `__del__()` cleanup on both classes.
+
+4. **Chunker condition bug** (`chunker.py`): `if not sections or "full_text" in sections:` merged two logically distinct cases — "no sections at all" and "only one section which happens to be full_text" — into a single branch, causing unexpected behaviour when `sections` was a non-empty dict with other keys. Split into explicit `if/elif`:
+   ```python
+   if not sections:
+       sections = {"full_text": strip_references_from_text(paper.get("full_text", ""))}
+   elif "full_text" in sections and len(sections) == 1:
+       sections = {"full_text": strip_references_from_text(sections["full_text"])}
+   ```
+
+5. **MD5 → SHA256** (`chunker.py`): `hashlib.md5` raises `ValueError` on FIPS-compliant systems. Replaced with `hashlib.sha256`. Chunk IDs remain 12-char hex strings (same interface, different hash).
+
+6. **`/no_think` duplication** (`llm_client.py`): Qwen3's `no_think` directive was injected into both the `system` field and the `prompt` field. Only the `system` field is needed; removed the redundant prefix from `prompt`.
+
+7. **Import ordering E402** (`indexer.py`): `logger = logging.getLogger(__name__)` was declared between stdlib `import` statements, violating PEP 8 module-level ordering enforced by ruff. Moved logger declaration to after all imports.
+
+#### Test Fixes
+
+The async refactoring required corresponding changes in all test files:
+
+| Test file | Change |
+|-----------|--------|
+| `test_llm_client.py` | `patch("httpx.Client")` → `patch("httpx.AsyncClient")`; all `TestGenerate` tests → `@pytest.mark.asyncio` + `async def`; `MagicMock` → `AsyncMock` for `.post` |
+| `test_rag_chain.py` | `TestQuery` tests → `@pytest.mark.asyncio` + `async def`; `.search` and `.generate` → `AsyncMock` |
+| `test_hybrid_retriever.py` | fixture `patch("httpx.Client")` → `patch("httpx.AsyncClient")` |
+| `test_api_integration.py` | `chain.query = AsyncMock(return_value=rag_response)` |
+
+**Result**: All **104 tests pass** (0 failures).
+
+#### README Update
+
+- Added `## Async Refactoring` section with a table of changed files and numbered list of all 7 bugs.
+- Updated Development Timeline with Day 8 row.
+- Removed the now-outdated "Synchronous Ollama calls" limitation note from Known Limitations.
+
+#### End of Day Status
+- Full async pipeline: `httpx.AsyncClient` throughout, all I/O properly awaited.
+- 7 bugs identified and fixed (UMAP dead code, tuple unpacking, HTTP leaks, chunker logic, MD5→SHA256, `/no_think` duplication, import ordering).
+- All 104 tests passing with correct async mocks.
+- README updated.
+- All code pushed to GitHub.
