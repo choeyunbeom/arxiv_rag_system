@@ -13,7 +13,6 @@ External dependency (Ollama HTTP API) is mocked.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 
 from src.api.core.llm_client import LLMClient
 
