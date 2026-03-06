@@ -17,8 +17,8 @@
 
 #### Data Collection (`src/ingestion/arxiv_crawler.py`)
 - Built arXiv API crawler with 10 search queries (RAG, QLoRA, LoRA, hallucination, etc.)
-- Collected 132 unique papers after deduplication (from 150 raw results)
-- Downloaded all 132 PDFs successfully
+- Collected 153 unique papers after deduplication (from 150 raw results)
+- Downloaded all 153 PDFs successfully
 - Encountered arXiv API rate limit (HTTP 429) — added retry logic with `delay_seconds=5.0`, `num_retries=5`, and 5s inter-query delay
 - Added resume support: if metadata file exists, appends new results instead of starting over
 
@@ -28,7 +28,7 @@
 - **v3**: Tuned section detection for actual pymupdf4llm output format
   - arXiv papers use bold numbered headers (`**1** **Introduction**`), not Markdown `#` headers
   - Built regex patterns for both formats: bold numbered, Markdown `#`, and standalone `**Abstract**`
-  - Result: 82/132 papers successfully sectioned, 50 fell back to full_text
+  - Result: 82/153 papers successfully sectioned, 50 fell back to full_text
 
 #### Chunking (`src/api/core/chunker.py`)
 - Section-aware chunking: does not cross section boundaries
@@ -91,7 +91,7 @@ Correct ranking restored. Switched to `mxbai-embed-large` and re-indexed.
 > For full debugging data and analysis, see [Embedding Model Debugging Log](embedding_model_debugging.md).
 
 #### End of Day Status
-- 132 papers collected, parsed, chunked, and indexed
+- 153 papers collected, parsed, chunked, and indexed
 - ~3500 quality-filtered chunks in ChromaDB
 - Test queries returning accurate results (distance 0.16–0.19)
 - All code pushed to GitHub
@@ -338,7 +338,7 @@ Built a data generation pipeline to create training data for QLoRA fine-tuning. 
 | **Total** | **1,997** | **0 generation failures** |
 
 **Implementation Details** (`src/finetuning/generate_qa_dataset.py`):
-- Input: 2,886 chunks from 132 papers
+- Input: 2,886 chunks from 153 papers
 - Chunk text truncated to 500 characters (Type 1/3) or 400 characters (Type 2) to keep generation fast
 - Ollama `format: json` parameter forces JSON-structured output; model generates JSON inside the `thinking` field, which is extracted by the pipeline
 - Generation speed: ~33 pairs/min (1,997 pairs in 67 minutes)

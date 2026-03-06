@@ -13,7 +13,7 @@ Ask a question in natural language → the system retrieves relevant papers → 
 ![FastAPI Swagger UI — interactive API documentation with example requests and responses](docs/demo/swagger_demo.png)
 ![Interactive 3D UMAP Visualisation of Embedding Space](docs/demo/umap_demo.png)
 
-> The UI shows the full query flow: enter a question → hybrid retrieval searches 132 arXiv papers → cross-encoder reranks results → Qwen3 4B generates a cited answer. 3D UMAP visualisations map the query to the semantic space of the arXiv corpus. Latency breakdown shows retrieval vs generation time.
+> The UI shows the full query flow: enter a question → hybrid retrieval searches 153 arXiv papers → cross-encoder reranks results → Qwen3 4B generates a cited answer. 3D UMAP visualisations map the query to the semantic space of the arXiv corpus. Latency breakdown shows retrieval vs generation time.
 
 ## Architecture
 
@@ -147,7 +147,7 @@ arxiv_rag_system/
 │   └── test_api_integration.py      # 19 integration tests
 ├── ui/app.py                        # Streamlit frontend
 ├── data/
-│   ├── raw/                         # 132 arXiv PDFs
+│   ├── raw/                         # 153 arXiv PDFs
 │   ├── processed/                   # Chunks, metadata, eval results
 │   ├── base_model/                  # Qwen3-4B weights (git-ignored)
 │   └── finetuned_lora/              # LoRA adapter + checkpoints (git-ignored)
@@ -295,7 +295,7 @@ Additional contributing factors include catastrophic forgetting in the 4B model 
 
 | Day | Focus | Key Outcomes |
 |-----|-------|-------------|
-| 1 | Infrastructure | 132 papers crawled, parsed, chunked, indexed. Caught embedding model failure via cosine similarity test. |
+| 1 | Infrastructure | 153 papers crawled, parsed, chunked, indexed. Caught embedding model failure via cosine similarity test. |
 | 2 | RAG Pipeline | FastAPI + Streamlit serving. Evaluation pipeline with 15-question benchmark. Qwen3 thinking mode fix. |
 | 3 | Retrieval Optimisation | Hit Rate 60% → 100%, MRR 0.51 → 0.82. Hybrid search + cross-encoder reranking. |
 | 4 | Fine-Tuning Prep | 1,997 synthetic Q&A pairs generated. Code quality refactoring (9 fixes). |
@@ -342,7 +342,7 @@ All 104 tests pass after these changes.
 
 ## Known Limitations & Scaling Considerations
 
-- **In-memory BM25**: All chunks loaded into memory. Sufficient for 132 papers (~5K chunks), but would require ElasticSearch/OpenSearch for larger corpora.
+- **In-memory BM25**: All chunks loaded into memory. Sufficient for 153 papers (~5K chunks), but would require ElasticSearch/OpenSearch for larger corpora.
 - **Single-worker FastAPI**: Currently runs with a single Uvicorn worker. Horizontal scaling would require a shared-state solution for the BM25 index (currently in-process memory).
 - **Ollama not containerised**: Runs on host for Apple Silicon Metal GPU access. For cloud deployment, would need a GPU-enabled container or API-based LLM service.
 
