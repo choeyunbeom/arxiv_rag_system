@@ -17,52 +17,17 @@ Ask a question in natural language → the system retrieves relevant papers → 
 
 ## Architecture
 
-```
-                          ┌──────────────────────────────────────┐
-                          │              User Query              │
-                          └──────────────────┬───────────────────┘
-                                             │
-                          ┌──────────────────▼───────────────────┐
-                          │           FastAPI Backend            │
-                          │         POST /query {question}       │
-                          └──────────────────┬───────────────────┘
-                                             │
-                     ┌───────────────────────┼───────────────────┐
-                     │                       │                   │
-          ┌──────────▼──────────┐ ┌──────────▼──────────┐        │
-          │   ChromaDB Vector   │ │    BM25 Keyword     │        │
-          │   Search (Top-40)   │ │   Search (Top-40)   │        │
-          │  mxbai-embed-large  │ │     rank_bm25       │        │
-          └──────────┬──────────┘ └──────────┬──────────┘        │
-                     │                       │                   │
-                     └───────────┬───────────┘                   │
-                                 │                               │
-                     ┌───────────▼───────────┐                   │
-                     │  Reciprocal Rank      │                   │
-                     │  Fusion (k=60)        │                   │
-                     └───────────┬───────────┘                   │
-                                 │                               │
-                     ┌───────────▼───────────┐                   │
-                     │  Cross-Encoder        │                   │
-                     │  Reranker (Top-5)     │                   │
-                     │  ms-marco-MiniLM-L6   │                   │
-                     └───────────┬───────────┘                   │
-                                 │                               │
-                     ┌───────────▼───────────┐                   │
-                     │  Deduplication by     │                   │
-                     │  arxiv_id::section    │                   │
-                     └───────────┬───────────┘                   │
-                                 │                               │
-                          ┌──────▼───────────────────────────────▼──┐
-                          │         Qwen3 4B (via Ollama)           │
-                          │    System prompt + Retrieved context    │
-                          │         → Cited answer generation       │
-                          └──────────────────┬──────────────────────┘
-                                             │
-                          ┌──────────────────▼──────────────────────┐
-                          │         Streamlit Frontend              │
-                          │  Answer + Source cards with arXiv links │
-                          └─────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A["User Query"] --> B["FastAPI Backend\nPOST /query"]
+    B --> C["ChromaDB Vector Search (Top-40)\nmxbai-embed-large"]
+    B --> D["BM25 Keyword Search (Top-40)\nrank_bm25"]
+    C --> E["Reciprocal Rank Fusion (k=60)"]
+    D --> E
+    E --> F["Cross-Encoder Reranker (Top-5)\nms-marco-MiniLM-L6"]
+    F --> G["Deduplication\narxiv_id::section"]
+    G --> H["Qwen3 4B (via Ollama)\nSystem prompt + Retrieved context\n→ Cited answer generation"]
+    H --> I["Streamlit Frontend\nAnswer + Source cards with arXiv links"]
 ```
 
 ## Key Results
