@@ -368,60 +368,118 @@ if should_query:
             start = time.time()
 
             try:
-                response = httpx.post(
-                    f"{API_URL}/query",
-                    json={"question": question, "top_k": top_k, "include_vis": include_vis},
-                    timeout=120.0,
-                )
-                elapsed = time.time() - start
-
-                st.write("📊 Reranking and deduplicating results...")
-
-                # Handle HTTP errors
-                if response.status_code == 422:
-                    status.update(label="Validation Error", state="error")
-                    st.error("❌ Invalid input. Please check your question and try again.")
-                elif response.status_code == 503:
-                    status.update(label="Service Unavailable", state="error")
-                    st.error(
-                        "🔌 **Ollama service is unavailable.**\n\n"
-                        "Make sure Ollama is running:\n"
-                        "```bash\nollama serve\n```"
+                if include_vis:
+                    # Non-streaming path: needed for UMAP visualization data
+                    response = httpx.post(
+                        f"{API_URL}/query",
+                        json={"question": question, "top_k": top_k, "include_vis": True},
+                        timeout=120.0,
                     )
-                elif response.status_code == 504:
-                    status.update(label="Timeout", state="error")
-                    st.error(
-                        "⏱️ **LLM generation timed out.**\n\n"
-                        "The model took too long to respond. Try a shorter or simpler question."
-                    )
-                elif response.status_code >= 400:
-                    status.update(label="Error", state="error")
-                    detail = response.json().get("detail", "Unknown error")
-                    st.error(f"❌ Server error ({response.status_code}): {detail}")
+                    elapsed = time.time() - start
+
+                    if response.status_code == 422:
+                        status.update(label="Validation Error", state="error")
+                        st.error("❌ Invalid input. Please check your question and try again.")
+                    elif response.status_code == 503:
+                        status.update(label="Service Unavailable", state="error")
+                        st.error("🔌 **Ollama service is unavailable.**\n\nMake sure Ollama is running:\n```bash\nollama serve\n```")
+                    elif response.status_code == 504:
+                        status.update(label="Timeout", state="error")
+                        st.error("⏱️ **LLM generation timed out.**\n\nTry a shorter or simpler question.")
+                    elif response.status_code >= 400:
+                        status.update(label="Error", state="error")
+                        detail = response.json().get("detail", "Unknown error")
+                        st.error(f"❌ Server error ({response.status_code}): {detail}")
+                    else:
+                        data = response.json()
+                        status.update(label=f"Done in {elapsed:.1f}s", state="complete")
+
+                        st.markdown("### 💡 Answer")
+                        st.markdown(f'<div class="answer-box">{data["answer"]}</div>', unsafe_allow_html=True)
+
+                        if "latency" in data and data["latency"]:
+                            with st.expander("⏱️ Latency Breakdown", expanded=False):
+                                render_latency_breakdown(data["latency"])
+
+                        if data.get("vis_data"):
+                            render_umap_visualization(data["vis_data"])
+
+                        render_sources(data.get("sources", []))
                 else:
-                    data = response.json()
-                    st.write("💡 Generating answer with Qwen3...")
-                    status.update(label=f"Done in {elapsed:.1f}s", state="complete")
+                    # Streaming path: real-time token display via NDJSON
+                    import json as _json
 
-                    # Answer
-                    st.markdown("### 💡 Answer")
-                    st.markdown(
-                        f'<div class="answer-box">{data["answer"]}</div>',
-                        unsafe_allow_html=True,
-                    )
+                    sources_data = []
+                    latency_data = None
+                    answer_text = ""
 
-                    # Latency breakdown
-                    if "latency" in data and data["latency"]:
+                    with httpx.stream(
+                        "POST",
+                        f"{API_URL}/query/stream",
+                        json={"question": question, "top_k": top_k},
+                        timeout=120.0,
+                    ) as stream:
+                        if stream.status_code >= 400:
+                            status.update(label="Error", state="error")
+                            error_body = ""
+                            for chunk in stream.iter_text():
+                                error_body += chunk
+                            try:
+                                detail = _json.loads(error_body).get("detail", error_body)
+                            except _json.JSONDecodeError:
+                                detail = error_body
+                            st.error(f"❌ Server error ({stream.status_code}): {detail}")
+                        else:
+                            st.write("📊 Reranking and deduplicating results...")
+
+                            # Prepare answer placeholder for streaming tokens
+                            answer_header_shown = False
+                            answer_placeholder = None
+
+                            for line in stream.iter_lines():
+                                if not line:
+                                    continue
+                                try:
+                                    event = _json.loads(line)
+                                except _json.JSONDecodeError:
+                                    continue
+
+                                evt_type = event.get("event")
+
+                                if evt_type == "sources":
+                                    sources_data = event.get("data", [])
+                                    st.write("💡 Generating answer with Qwen3...")
+
+                                elif evt_type == "token":
+                                    if not answer_header_shown:
+                                        status.update(label="Generating answer...", state="running")
+                                        answer_header_shown = True
+                                        # Close the status block and show answer area
+                                        status.update(label="Streaming answer...", state="running")
+
+                                    answer_text += event.get("data", "")
+
+                                elif evt_type == "done":
+                                    latency_data = event.get("data", {}).get("latency")
+
+                                elif evt_type == "error":
+                                    status.update(label="Error", state="error")
+                                    st.error(f"❌ {event.get('data', 'Unknown error')}")
+
+                            elapsed = time.time() - start
+                            status.update(label=f"Done in {elapsed:.1f}s", state="complete")
+
+                    # Render results after stream completes
+                    if answer_text:
+                        st.markdown("### 💡 Answer")
+                        st.markdown(f'<div class="answer-box">{answer_text}</div>', unsafe_allow_html=True)
+
+                    if latency_data:
                         with st.expander("⏱️ Latency Breakdown", expanded=False):
-                            render_latency_breakdown(data["latency"])
+                            render_latency_breakdown(latency_data)
 
-                    # Visualization
-                    if include_vis and data.get("vis_data"):
-                        render_umap_visualization(data["vis_data"])
-
-
-                    # Sources
-                    render_sources(data.get("sources", []))
+                    if sources_data:
+                        render_sources(sources_data)
 
             except httpx.ConnectError:
                 status.update(label="Connection Failed", state="error")

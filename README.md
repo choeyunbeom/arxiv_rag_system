@@ -28,6 +28,7 @@ flowchart TD
     F --> G["Deduplication\narxiv_id::section"]
     G --> H["Qwen3 4B (via Ollama)\nSystem prompt + Retrieved context\n→ Cited answer generation"]
     H --> I["Streamlit Frontend\nAnswer + Source cards with arXiv links"]
+    H -.->|"POST /query/stream (NDJSON)"| I
 ```
 
 ## Key Results
@@ -70,7 +71,7 @@ Few-shot prompt engineering outperformed both zero-shot and fine-tuning on both 
 | Fine-Tuning | LoRA via PEFT + trl (SFTTrainer) |
 | CI/CD | GitHub Actions (ruff + pytest) |
 | Deployment | Docker Compose |
-| Testing | pytest (104 tests) |
+| Testing | pytest (112 tests) |
 | Config | Pydantic Settings |
 
 ## Project Structure
@@ -89,7 +90,7 @@ arxiv_rag_system/
 │   │   │   └── chunker.py           # Token-aware chunking with quality filters
 │   │   ├── models/schemas.py        # Request/response Pydantic models
 │   │   ├── routers/
-│   │   │   ├── query.py             # POST /query endpoint
+│   │   │   ├── query.py             # POST /query + POST /query/stream endpoints
 │   │   │   └── health.py            # GET /health endpoint
 │   │   └── main.py                  # App entry with lifespan pre-loading
 │   ├── ingestion/
@@ -106,10 +107,10 @@ arxiv_rag_system/
 │   └── run_fewshot_experiment.py    # 3-way prompt comparison orchestrator
 ├── tests/
 │   ├── test_chunker.py              # 33 unit tests
-│   ├── test_llm_client.py           # 16 unit tests
+│   ├── test_llm_client.py           # 22 unit tests
 │   ├── test_rag_chain.py            # 17 unit tests
 │   ├── test_hybrid_retriever.py     # 19 unit tests
-│   └── test_api_integration.py      # 19 integration tests
+│   └── test_api_integration.py      # 21 integration tests
 ├── ui/app.py                        # Streamlit frontend
 ├── data/
 │   ├── raw/                         # 153 arXiv PDFs
@@ -268,6 +269,7 @@ Additional contributing factors include catastrophic forgetting in the 4B model 
 | 6 | Testing & CI/CD | 104 tests (unit + integration). GitHub Actions CI. Docker Compose full-stack deployment. Few-shot experiment revealing training data contamination as fine-tuning root cause. |
 | 7 | UI & Demo | Streamlit UI improvements (error handling, latency visualisation). API documentation. Makefile + Docker healthchecks. BERTScore semantic evaluation. |
 | 8 | Async Refactoring & Bug Fixes | Full async pipeline (httpx.AsyncClient, async/await throughout). 7 bugs fixed. All 104 tests passing. |
+| 9 | Scalability & Streaming | CPU-bound offloading (asyncio.to_thread), SSE streaming with `<think>` tag filter, POST /query/stream endpoint. 112 tests passing. |
 
 ## Detailed Logs
 
@@ -305,11 +307,33 @@ The entire request pipeline was blocking — `httpx.Client` in both `HybridRetri
 
 All 104 tests pass after these changes.
 
+## CPU-Bound Offloading & Streaming
+
+### Event Loop Unblocking (Day 9)
+
+Day 8 made all I/O async, but CPU-intensive ML operations (`CrossEncoder.predict()`, BM25 scoring, ChromaDB queries, UMAP transforms) still blocked the event loop. A single user's reranking (~1.3s) would stall the entire server.
+
+**Solution**: All blocking operations offloaded to the thread pool via `asyncio.to_thread()`. Vector search and BM25 search now run concurrently via `asyncio.gather()`.
+
+### SSE Streaming
+
+Added `POST /query/stream` endpoint returning newline-delimited JSON (NDJSON) events:
+
+```
+{"event": "sources", "data": [...]}     # Retrieval results (immediate)
+{"event": "token", "data": "Hello"}     # Each answer token (~1-2s TTFB)
+{"event": "token", "data": " world"}
+{"event": "done", "data": {"latency": {...}}}
+```
+
+A `_ThinkState` state machine in `LLMClient.stream_generate()` filters `<think>` blocks character-by-character during streaming — thinking content is silently discarded, only answer tokens reach the client. The existing `POST /query` endpoint remains unchanged for backward compatibility.
+
 ## Known Limitations & Scaling Considerations
 
 - **In-memory BM25**: All chunks loaded into memory. Sufficient for 153 papers (~5K chunks), but would require ElasticSearch/OpenSearch for larger corpora.
 - **Single-worker FastAPI**: Currently runs with a single Uvicorn worker. Horizontal scaling would require a shared-state solution for the BM25 index (currently in-process memory).
 - **Ollama not containerised**: Runs on host for Apple Silicon Metal GPU access. For cloud deployment, would need a GPU-enabled container or API-based LLM service.
+- **Single Ollama instance**: Embedding and text generation share one Ollama process. Under concurrent load, long LLM generation can queue lightweight embedding requests. Splitting into dedicated embedding and generation services would eliminate this contention.
 
 ## License
 

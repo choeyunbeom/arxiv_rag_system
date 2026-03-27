@@ -1,10 +1,14 @@
 """
 Query Router
 - POST /query — answer a question using the RAG pipeline
+- POST /query/stream — stream answer tokens via Server-Sent Events (NDJSON)
 """
+
+import json
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from src.api.models.schemas import (
     LatencyBreakdown,
@@ -110,3 +114,49 @@ async def query(request: QueryRequest, req: Request):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal error: {type(e).__name__}: {str(e)}")
+
+
+@router.post(
+    "/query/stream",
+    summary="Stream an answer about arXiv papers (NDJSON)",
+    response_description="Newline-delimited JSON stream of events",
+    responses={
+        503: {"description": "Ollama LLM service unavailable"},
+    },
+)
+async def query_stream(request: QueryRequest, req: Request):
+    """
+    Stream the RAG pipeline response as newline-delimited JSON (NDJSON).
+
+    Each line is a JSON object with an `event` field:
+    - `{"event": "sources", "data": [...]}` — retrieved source citations
+    - `{"event": "token", "data": "..."}` — incremental answer token
+    - `{"event": "done", "data": {"latency": {...}}}` — pipeline complete
+    - `{"event": "error", "data": "..."}` — on failure
+    """
+    rag_chain = req.app.state.rag_chain
+
+    if rag_chain is None:
+        raise HTTPException(
+            status_code=503,
+            detail="RAG pipeline is not initialized.",
+        )
+
+    async def _event_generator():
+        try:
+            async for event_line in rag_chain.stream_query(
+                question=request.question,
+                top_k=request.top_k,
+            ):
+                yield event_line
+        except httpx.ConnectError:
+            yield json.dumps({"event": "error", "data": "Ollama service unavailable"}) + "\n"
+        except httpx.TimeoutException:
+            yield json.dumps({"event": "error", "data": "LLM generation timed out"}) + "\n"
+        except Exception as e:
+            yield json.dumps({"event": "error", "data": f"{type(e).__name__}: {str(e)}"}) + "\n"
+
+    return StreamingResponse(
+        _event_generator(),
+        media_type="application/x-ndjson",
+    )
