@@ -165,3 +165,97 @@ class TestGenerate:
         call_args = client._mock_http.post.call_args
         url = call_args.args[0]
         assert url.endswith("/api/generate")
+
+
+# ──────────────────────────────────────────────
+# _build_payload
+# ──────────────────────────────────────────────
+
+class TestBuildPayload:
+    def test_stream_false(self, client):
+        payload = client._build_payload("test", "system", 0.3, stream=False)
+        assert payload["stream"] is False
+
+    def test_stream_true(self, client):
+        payload = client._build_payload("test", "system", 0.3, stream=True)
+        assert payload["stream"] is True
+
+    def test_no_think_in_system(self, client):
+        payload = client._build_payload("test", "Be helpful.", 0.3, stream=False)
+        assert payload["system"].startswith("/no_think")
+
+    def test_no_system_when_empty(self, client):
+        payload = client._build_payload("test", "", 0.3, stream=False)
+        assert "system" not in payload
+
+
+# ──────────────────────────────────────────────
+# stream_generate
+# ──────────────────────────────────────────────
+
+class TestStreamGenerate:
+    @pytest.mark.asyncio
+    async def test_streams_clean_tokens(self, client):
+        """stream_generate should yield tokens with <think> blocks filtered out."""
+        import json
+
+        # Simulate Ollama streaming response: each line is a JSON object
+        lines = [
+            json.dumps({"response": "Hello", "done": False}),
+            json.dumps({"response": " world", "done": False}),
+            json.dumps({"response": "", "done": True}),
+        ]
+
+        mock_response = AsyncMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=False)
+
+        async def _aiter_lines():
+            for line in lines:
+                yield line
+
+        mock_response.aiter_lines = _aiter_lines
+
+        client._mock_http.stream = MagicMock(return_value=mock_response)
+
+        tokens = []
+        async for token in client.stream_generate(prompt="test", system="Be helpful."):
+            tokens.append(token)
+
+        full_text = "".join(tokens)
+        assert "Hello" in full_text
+        assert "world" in full_text
+
+    @pytest.mark.asyncio
+    async def test_filters_think_tags(self, client):
+        """stream_generate should filter out <think>...</think> content."""
+        import json
+
+        lines = [
+            json.dumps({"response": "<think>", "done": False}),
+            json.dumps({"response": "reasoning here", "done": False}),
+            json.dumps({"response": "</think>", "done": False}),
+            json.dumps({"response": "Actual answer", "done": False}),
+            json.dumps({"response": "", "done": True}),
+        ]
+
+        mock_response = AsyncMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=False)
+
+        async def _aiter_lines():
+            for line in lines:
+                yield line
+
+        mock_response.aiter_lines = _aiter_lines
+        client._mock_http.stream = MagicMock(return_value=mock_response)
+
+        tokens = []
+        async for token in client.stream_generate(prompt="test", system="Be helpful."):
+            tokens.append(token)
+
+        full_text = "".join(tokens)
+        assert "reasoning here" not in full_text
+        assert "Actual answer" in full_text

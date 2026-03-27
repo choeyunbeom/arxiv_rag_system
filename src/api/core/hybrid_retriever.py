@@ -6,6 +6,7 @@ Hybrid Retriever with Reranker (v3)
 - Deduplication: only the best chunk per arxiv_id is kept
 """
 
+import asyncio
 import json
 import math
 import pickle
@@ -195,14 +196,17 @@ class HybridRetriever:
         fetch_k = top_k * 8  # Get 40 candidates for better coverage
         query_embedding = await self._embed_query(query)
 
-        vector_ranks = self._vector_search(query_embedding, fetch_k)
-        bm25_ranks = self._bm25_search(query, fetch_k)
+        # Offload sync CPU-bound operations to threadpool to avoid blocking the event loop
+        vector_ranks, bm25_ranks = await asyncio.gather(
+            asyncio.to_thread(self._vector_search, query_embedding, fetch_k),
+            asyncio.to_thread(self._bm25_search, query, fetch_k),
+        )
 
         # Stage 2: RRF fusion
         fused_ids = self._rrf_fusion(vector_ranks, bm25_ranks)[:fetch_k]
 
-        # Stage 3: Rerank all candidates
-        reranked = self._rerank(query, fused_ids)
+        # Stage 3: Rerank all candidates (CPU-intensive ML inference)
+        reranked = await asyncio.to_thread(self._rerank, query, fused_ids)
 
         # Stage 4: Deduplicate by arxiv_id
         deduped = self._deduplicate(reranked, top_k)

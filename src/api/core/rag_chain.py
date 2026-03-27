@@ -6,7 +6,10 @@ RAG Chain
 - Accepts external system_prompt / query_template for experiment injection
 """
 
+import asyncio
+import json
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -109,8 +112,8 @@ class RAGChain:
 
             from src.api.models.schemas import VisData, VisPoint
 
-            # transform query
-            query_3d = self.retriever.umap_reducer.transform(np.array([query_emb]))[0]
+            # transform query (CPU-intensive, offload to threadpool)
+            query_3d = (await asyncio.to_thread(self.retriever.umap_reducer.transform, np.array([query_emb])))[0]
 
             points = []
 
@@ -160,3 +163,56 @@ class RAGChain:
             ),
             vis_data=vis_data
         )
+
+    async def stream_query(self, question: str, top_k: int = 5) -> AsyncIterator[str]:
+        """Stream the RAG pipeline as Server-Sent Events (SSE).
+
+        Yields newline-delimited JSON events:
+          {"event": "sources", "data": [...]}      — retrieved sources
+          {"event": "token", "data": "..."}        — each answer token
+          {"event": "done", "data": {"latency": ...}} — final latency info
+          {"event": "error", "data": "..."}        — on failure
+        """
+        total_start = time.perf_counter()
+
+        # 1. Retrieve (non-streaming — must complete before generation)
+        retrieval_start = time.perf_counter()
+        chunks, _ = await self.retriever.search(question, top_k=top_k, get_embeddings=False)
+        retrieval_ms = (time.perf_counter() - retrieval_start) * 1000
+
+        # 2. Emit sources immediately so the client can render them while LLM generates
+        sources = self._deduplicate_sources(chunks)
+        sources_payload = [
+            {
+                "title": s.title,
+                "arxiv_id": s.arxiv_id,
+                "section": s.section,
+                "authors": s.authors,
+                "distance": s.distance,
+            }
+            for s in sources
+        ]
+        yield json.dumps({"event": "sources", "data": sources_payload}) + "\n"
+
+        # 3. Stream LLM generation
+        context = self._format_context(chunks)
+        prompt = self.query_template.format(context=context, question=question)
+
+        generation_start = time.perf_counter()
+        async for token in self.llm.stream_generate(prompt=prompt, system=self.system_prompt):
+            yield json.dumps({"event": "token", "data": token}) + "\n"
+        generation_ms = (time.perf_counter() - generation_start) * 1000
+
+        total_ms = (time.perf_counter() - total_start) * 1000
+
+        # 4. Final event with latency
+        yield json.dumps({
+            "event": "done",
+            "data": {
+                "latency": {
+                    "retrieval_ms": round(retrieval_ms, 1),
+                    "generation_ms": round(generation_ms, 1),
+                    "total_ms": round(total_ms, 1),
+                }
+            },
+        }) + "\n"

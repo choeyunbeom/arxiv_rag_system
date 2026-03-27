@@ -200,12 +200,16 @@ class TestQueryEndpoint:
 
 class TestHealthEndpoint:
     @patch("src.api.routers.health.chromadb")
-    @patch("src.api.routers.health.httpx.get")
-    def test_all_healthy(self, mock_httpx_get, mock_chromadb, client):
-        # Mock Ollama healthy
+    @patch("src.api.routers.health.httpx.AsyncClient")
+    def test_all_healthy(self, mock_async_client_cls, mock_chromadb, client):
+        # Mock Ollama healthy via AsyncClient context manager
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_httpx_get.return_value = mock_response
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get = AsyncMock(return_value=mock_response)
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+        mock_async_client_cls.return_value = mock_client_instance
 
         # Mock ChromaDB healthy
         mock_collection = MagicMock()
@@ -221,9 +225,13 @@ class TestHealthEndpoint:
         assert data["collection_count"] == 3500
 
     @patch("src.api.routers.health.chromadb")
-    @patch("src.api.routers.health.httpx.get")
-    def test_ollama_down_degraded(self, mock_httpx_get, mock_chromadb, client):
-        mock_httpx_get.side_effect = httpx.ConnectError("Connection refused")
+    @patch("src.api.routers.health.httpx.AsyncClient")
+    def test_ollama_down_degraded(self, mock_async_client_cls, mock_chromadb, client):
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+        mock_async_client_cls.return_value = mock_client_instance
 
         mock_collection = MagicMock()
         mock_collection.count.return_value = 3500
@@ -236,11 +244,15 @@ class TestHealthEndpoint:
         assert data["chromadb"] is True
 
     @patch("src.api.routers.health.chromadb")
-    @patch("src.api.routers.health.httpx.get")
-    def test_chromadb_down_degraded(self, mock_httpx_get, mock_chromadb, client):
+    @patch("src.api.routers.health.httpx.AsyncClient")
+    def test_chromadb_down_degraded(self, mock_async_client_cls, mock_chromadb, client):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_httpx_get.return_value = mock_response
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get = AsyncMock(return_value=mock_response)
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+        mock_async_client_cls.return_value = mock_client_instance
 
         mock_chromadb.HttpClient.return_value.get_collection.side_effect = Exception("Connection refused")
 
@@ -252,9 +264,14 @@ class TestHealthEndpoint:
         assert data["collection_count"] == 0
 
     @patch("src.api.routers.health.chromadb")
-    @patch("src.api.routers.health.httpx.get")
-    def test_both_down_degraded(self, mock_httpx_get, mock_chromadb, client):
-        mock_httpx_get.side_effect = httpx.ConnectError("refused")
+    @patch("src.api.routers.health.httpx.AsyncClient")
+    def test_both_down_degraded(self, mock_async_client_cls, mock_chromadb, client):
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+        mock_async_client_cls.return_value = mock_client_instance
+
         mock_chromadb.HttpClient.return_value.get_collection.side_effect = Exception("refused")
 
         response = client.get("/health")
@@ -264,11 +281,15 @@ class TestHealthEndpoint:
         assert data["chromadb"] is False
 
     @patch("src.api.routers.health.chromadb")
-    @patch("src.api.routers.health.httpx.get")
-    def test_health_response_schema(self, mock_httpx_get, mock_chromadb, client):
+    @patch("src.api.routers.health.httpx.AsyncClient")
+    def test_health_response_schema(self, mock_async_client_cls, mock_chromadb, client):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_httpx_get.return_value = mock_response
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get = AsyncMock(return_value=mock_response)
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+        mock_async_client_cls.return_value = mock_client_instance
         mock_collection = MagicMock()
         mock_collection.count.return_value = 0
         mock_chromadb.HttpClient.return_value.get_collection.return_value = mock_collection
@@ -280,3 +301,44 @@ class TestHealthEndpoint:
         assert "chromadb" in data
         assert "collection_count" in data
         assert isinstance(data["collection_count"], int)
+
+
+# ──────────────────────────────────────────────
+# POST /query/stream — Streaming endpoint
+# ──────────────────────────────────────────────
+
+class TestQueryStreamEndpoint:
+    def test_stream_returns_ndjson(self, client, mock_rag_chain):
+        import json
+
+        # Mock stream_query to yield NDJSON lines
+        async def _mock_stream(question, top_k):
+            yield json.dumps({"event": "sources", "data": [{"title": "Paper A", "arxiv_id": "2401.00001", "section": "Intro", "authors": "Auth A", "distance": 0.1}]}) + "\n"
+            yield json.dumps({"event": "token", "data": "Hello"}) + "\n"
+            yield json.dumps({"event": "token", "data": " world"}) + "\n"
+            yield json.dumps({"event": "done", "data": {"latency": {"retrieval_ms": 100.0, "generation_ms": 200.0, "total_ms": 300.0}}}) + "\n"
+
+        mock_rag_chain.stream_query = _mock_stream
+
+        response = client.post("/query/stream", json={"question": "What is RAG?"})
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("application/x-ndjson")
+
+        lines = [line for line in response.text.strip().split("\n") if line]
+        events = [json.loads(line) for line in lines]
+
+        assert events[0]["event"] == "sources"
+        assert events[1]["event"] == "token"
+        assert events[1]["data"] == "Hello"
+        assert events[-1]["event"] == "done"
+        assert "latency" in events[-1]["data"]
+
+    def test_stream_rag_not_initialized(self, client, mock_rag_chain):
+        # Temporarily set rag_chain to None
+        original = client.app.state.rag_chain
+        client.app.state.rag_chain = None
+
+        response = client.post("/query/stream", json={"question": "What is RAG?"})
+        assert response.status_code == 503
+
+        client.app.state.rag_chain = original

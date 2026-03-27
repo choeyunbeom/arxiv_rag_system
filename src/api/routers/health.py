@@ -3,6 +3,8 @@ Health Router
 - GET /health — check status of all services
 """
 
+import asyncio
+
 import chromadb
 import httpx
 from fastapi import APIRouter
@@ -31,25 +33,31 @@ async def health():
     Overall status is `healthy` when all services are reachable,
     or `degraded` when one or more services are unavailable.
     """
-    ollama_ok = False
-    chroma_ok = False
-    collection_count = 0
 
-    # Check Ollama
-    try:
-        r = httpx.get(f"http://{settings.OLLAMA_HOST}/api/tags", timeout=5.0)
-        ollama_ok = r.status_code == 200
-    except Exception:
-        pass
+    async def _check_ollama() -> bool:
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                r = await client.get(f"http://{settings.OLLAMA_HOST}/api/tags")
+                return r.status_code == 200
+        except Exception:
+            return False
 
-    # Check ChromaDB
-    try:
-        client = chromadb.HttpClient(host=settings.CHROMA_HOST, port=settings.CHROMA_PORT)
-        collection = client.get_collection(settings.COLLECTION_NAME)
-        collection_count = collection.count()
-        chroma_ok = True
-    except Exception:
-        pass
+    async def _check_chroma() -> tuple[bool, int]:
+        try:
+            def _sync_chroma():
+                client = chromadb.HttpClient(host=settings.CHROMA_HOST, port=settings.CHROMA_PORT)
+                collection = client.get_collection(settings.COLLECTION_NAME)
+                return collection.count()
+
+            count = await asyncio.to_thread(_sync_chroma)
+            return True, count
+        except Exception:
+            return False, 0
+
+    ollama_ok, (chroma_ok, collection_count) = await asyncio.gather(
+        _check_ollama(),
+        _check_chroma(),
+    )
 
     status = "healthy" if (ollama_ok and chroma_ok) else "degraded"
 

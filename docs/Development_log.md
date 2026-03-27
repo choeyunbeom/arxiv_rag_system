@@ -693,3 +693,58 @@ The async refactoring required corresponding changes in all test files:
 - All 104 tests passing with correct async mocks.
 - README updated.
 - All code pushed to GitHub.
+
+---
+
+### Day 9 (2025-03-26)
+
+#### CPU-Bound Offloading (Event Loop Unblocking)
+
+Day 8 converted all I/O to async, but CPU/GPU-intensive ML operations were still running synchronously inside the async event loop. While one user's reranking (1.3s) or UMAP transform ran, the entire server was blocked — even lightweight `GET /health` requests would stall.
+
+**Problem**: `CrossEncoder.predict()`, `BM25Okapi.get_scores()`, `ChromaDB collection.query()`, and UMAP `transform()` are all synchronous CPU-bound calls executing inside `async def` methods.
+
+**Solution**: Offloaded all blocking operations to the default thread pool via `asyncio.to_thread()`.
+
+| File | Change |
+|------|--------|
+| `hybrid_retriever.py` | `_vector_search()` + `_bm25_search()` run in parallel via `asyncio.gather(asyncio.to_thread(...))`. `_rerank()` offloaded via `asyncio.to_thread()`. |
+| `rag_chain.py` | UMAP `transform()` offloaded via `asyncio.to_thread()`. |
+| `routers/health.py` | `httpx.get()` (sync) → `httpx.AsyncClient` (async). ChromaDB health check offloaded via `asyncio.to_thread()`. Both checks run in parallel via `asyncio.gather()`. |
+
+**Bonus**: `_vector_search` and `_bm25_search` now execute concurrently instead of sequentially, shaving ~100-200ms off retrieval latency.
+
+#### SSE Streaming (TTFB Improvement)
+
+Previously, the user waited 15-20s staring at a blank screen while the LLM generated the full response. Implemented real-time token streaming via NDJSON Server-Sent Events.
+
+**Architecture**:
+
+1. **`LLMClient.stream_generate()`**: Calls Ollama with `stream=True`, yielding tokens in real-time. A `_ThinkState` state machine filters `<think>...</think>` blocks character-by-character — thinking content is silently discarded, only answer tokens are yielded. Handles edge cases: tags split across chunks, unclosed tags, empty thinking blocks.
+
+2. **`RAGChain.stream_query()`**: Async generator yielding NDJSON events:
+   - `{"event": "sources", "data": [...]}` — emitted immediately after retrieval, before LLM generation starts
+   - `{"event": "token", "data": "..."}` — each answer token as it arrives
+   - `{"event": "done", "data": {"latency": {...}}}` — final latency breakdown
+
+3. **`POST /query/stream`**: New FastAPI endpoint returning `StreamingResponse` with `application/x-ndjson` media type. Error events streamed inline (not HTTP error codes) so the connection stays open.
+
+4. **Streamlit UI**: When UMAP visualisation is disabled, the UI uses the streaming endpoint. When UMAP is enabled, falls back to the batch endpoint (UMAP requires the complete response). Sources are displayed as soon as retrieval completes, while the LLM answer streams in.
+
+**Impact**: First answer token now arrives ~1-2s after retrieval completes, instead of waiting the full 15-20s for generation to finish.
+
+#### Test Updates (104 → 112 tests)
+
+| Test file | Changes |
+|-----------|---------|
+| `test_llm_client.py` | +4 `TestBuildPayload` tests (stream flag, system injection). +2 `TestStreamGenerate` tests (token streaming, `<think>` filtering). |
+| `test_api_integration.py` | Health endpoint tests updated for `httpx.AsyncClient` mock pattern. +2 `TestQueryStreamEndpoint` tests (NDJSON response, 503 error). |
+
+**Result**: Ruff clean, 112/112 tests passed.
+
+#### End of Day Status
+- Event loop no longer blocked by ML inference — server stays responsive under concurrent load.
+- Real-time streaming reduces perceived latency from ~20s to ~1-2s TTFB.
+- Backward-compatible: existing `POST /query` endpoint unchanged, new `POST /query/stream` is additive.
+- All 112 tests passing.
+- All code pushed to GitHub.
