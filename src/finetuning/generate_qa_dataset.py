@@ -187,8 +187,8 @@ def generate_type3(chunk: dict) -> dict | None:
     title_lower = chunk["title"].lower()
     topic_map = {
         "rag": "retrieval-augmented generation",
-        "lora": "parameter-efficient fine-tuning",
         "qlora": "quantised fine-tuning",
+        "lora": "parameter-efficient fine-tuning",
         "hallucin": "LLM hallucination",
         "prompt": "prompt engineering",
         "instruct": "instruction tuning",

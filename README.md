@@ -71,7 +71,7 @@ Few-shot prompt engineering outperformed both zero-shot and fine-tuning on both 
 | Fine-Tuning | LoRA via PEFT + trl (SFTTrainer) |
 | CI/CD | GitHub Actions (ruff + pytest) |
 | Deployment | Docker Compose |
-| Testing | pytest (112 tests) |
+| Testing | pytest (208 tests) |
 | Config | Pydantic Settings |
 
 ## Project Structure
@@ -106,11 +106,13 @@ arxiv_rag_system/
 ├── scripts/
 │   └── run_fewshot_experiment.py    # 3-way prompt comparison orchestrator
 ├── tests/
-│   ├── test_chunker.py              # 33 unit tests
-│   ├── test_llm_client.py           # 22 unit tests
-│   ├── test_rag_chain.py            # 17 unit tests
-│   ├── test_hybrid_retriever.py     # 19 unit tests
-│   └── test_api_integration.py      # 21 integration tests
+│   ├── test_chunker.py              # 33 unit tests  — chunking, quality filters, chunk IDs
+│   ├── test_llm_client.py           # 22 unit tests  — Ollama wrapper, think-tag cleaning, streaming
+│   ├── test_rag_chain.py            # 18 unit tests  — prompt injection, context formatting, dedup
+│   ├── test_hybrid_retriever.py     # 18 unit tests  — RRF fusion, reranker, embed pipeline
+│   ├── test_api_integration.py      # 21 integration tests — FastAPI endpoints, schemas
+│   ├── test_qa_dataset_generator.py # 46 unit tests  — finetuning data pipeline, JSON parsing
+│   └── test_pdf_parser.py           # 51 unit tests  — PDF→Markdown, section detection edge cases
 ├── ui/app.py                        # Streamlit frontend
 ├── data/
 │   ├── raw/                         # 153 arXiv PDFs
@@ -267,6 +269,7 @@ Additional contributing factors include catastrophic forgetting in the 4B model 
 | 4 | Fine-Tuning Prep | 1,997 synthetic Q&A pairs generated. Code quality refactoring (9 fixes). |
 | 5 | Fine-Tuning & Eval | LoRA training, GGUF conversion, Ollama deployment. Honest evaluation showing regression — analysed root causes. |
 | 6 | Testing & CI/CD | 104 tests (unit + integration). GitHub Actions CI. Docker Compose full-stack deployment. Few-shot experiment revealing training data contamination as fine-tuning root cause. |
+| 10 | Test Coverage Expansion | +96 tests for finetuning pipeline and PDF parser. Bug found and fixed: ``generate_type3`` topic_map ``lora``/``qlora`` ordering caused QLoRA titles to resolve to wrong topic. 208 tests total. |
 | 7 | UI & Demo | Streamlit UI improvements (error handling, latency visualisation). API documentation. Makefile + Docker healthchecks. BERTScore semantic evaluation. |
 | 8 | Async Refactoring & Bug Fixes | Full async pipeline (httpx.AsyncClient, async/await throughout). 7 bugs fixed. All 104 tests passing. |
 | 9 | Scalability & Streaming | CPU-bound offloading (asyncio.to_thread), SSE streaming with `<think>` tag filter, POST /query/stream endpoint. 112 tests passing. |
@@ -280,6 +283,7 @@ For full experiment data, debugging notes, and the project retrospective:
 - [Embedding Model Debugging](docs/embedding_model_debugging.md)
 - [Retrieval Optimisation Experiments](docs/retrieval_optimisation.md)
 - [Fine-Tuning Experiment Log](docs/finetuning_experiment.md)
+- [Test Coverage](docs/testing.md)
 ---
 ## Async Refactoring 
 
