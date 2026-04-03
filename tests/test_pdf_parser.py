@@ -51,8 +51,6 @@ extract_text_from_pdf
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # Mock pymupdf4llm before importing the module under test
 sys.modules["pymupdf4llm"] = MagicMock()
 
@@ -291,7 +289,7 @@ class TestSplitSectionsStandaloneBold:
     def test_standalone_acknowledgments_not_supported(self):
         # **Acknowledgments** standalone is NOT in the section_markers patterns;
         # it falls back to full_text — this test documents current behaviour.
-        text = f"Main content.\n**Acknowledgments**\nThanks to reviewers."
+        text = "Main content.\n**Acknowledgments**\nThanks to reviewers."
         sections = split_sections(text)
         assert "full_text" in sections
 
@@ -316,7 +314,7 @@ class TestSplitSectionsPlainText:
     def test_plain_references_not_supported(self):
         # Plain "References\n" (no bold/hash) is NOT in section_markers;
         # the parser falls back to full_text — documents current behaviour.
-        text = f"Some content here that is long enough.\nReferences\n[1] Author 2023."
+        text = "Some content here that is long enough.\nReferences\n[1] Author 2023."
         sections = split_sections(text)
         assert "full_text" in sections
 
@@ -434,7 +432,7 @@ class TestSplitSectionsEdgeCases:
     def test_acknowledgements_variant_spelling_not_supported(self):
         # **Acknowledgements** (with -es) is not in section_markers;
         # falls back to full_text — documents current behaviour.
-        text = f"Main body text that is long enough.\n**Acknowledgements**\nWe thank the reviewers."
+        text = "Main body text that is long enough.\n**Acknowledgements**\nWe thank the reviewers."
         sections = split_sections(text)
         assert "full_text" in sections
 
