@@ -49,7 +49,7 @@ parametrised test catches this regression.
 """
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -60,7 +60,6 @@ from src.finetuning.generate_qa_dataset import (
     generate_type3,
     parse_json_response,
 )
-
 
 # ─────────────────────────────────────────────
 # Fixtures
